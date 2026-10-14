@@ -265,7 +265,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.14-18';
+const APP_VERSION = '2026.10.14-19';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적'};
@@ -520,6 +520,8 @@ function renderRoutines() {
   const msgBox = (r, date, text = routineText(r, date)) => `<textarea id="rt_${r.id}" rows="${text.split('\n').length + 1}" style="margin-top:8px;min-height:0;font-size:14px;line-height:1.5;background:var(--soft)">${esc(text)}</textarea>
     ${libraryText(r, date) ? `<div class="muted" style="margin-top:4px">📝 ${weekLabel(date)} 문구</div>` : ''}`;
   // 월요일·수요일은 문구 모음 열기, 직접 만든 정기 문자는 복사
+  // 수요상식 문제는 홈에 문구를 펼쳐 보이지 않음 (위 '수요상식 문제 모음' 버튼으로 확인)
+  const hideText = r => libKey(r) === 'wednesday';
   const copyBtn = r => libKey(r) ? '' : `<button class="btn sm grow" onclick="copyText($('rt_${r.id}').value)">📋 문구 복사</button>`;
   // 월요일 인사문자 모음 · 수요상식 문제 모음 버튼은 요일과 상관없이 항상 보이게
   const libBtns = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 4px">
@@ -530,7 +532,7 @@ function renderRoutines() {
       : !isToday ? `<span class="tag overdue">지난 ${DAYS[r.day]}요일 못 보냄</span>`
       : nowHM() >= r.time ? `<span class="tag overdue">⏰ ${r.time} 보낼 시간!</span>` : `<span class="tag today">오늘 ${r.time}</span>`;
     return `<div class="routine"><div class="row"><b class="grow">${esc(r.title)}</b>${tag}</div>
-      ${done ? '' : msgBox(r, date)}
+      ${done || hideText(r) ? '' : msgBox(r, date)}
       <div class="row" style="margin-top:8px">
         ${done ? '' : copyBtn(r)}
         <button class="btn sm grow${done ? ' sec' : ''}" style="${done ? '' : 'background:var(--ok)'}" onclick="markRoutine('${r.id}','${date}')">${done ? '보냄 취소' : '✓ 보냈어요'}</button>
@@ -539,7 +541,7 @@ function renderRoutines() {
   // 오늘 보낼 게 없으면 다음 정기 문자 문구를 미리 보여 줍니다
   const upcoming = [...db.routines].sort((a, b) => (nextDue(a) + a.time).localeCompare(nextDue(b) + b.time))[0];
   const preview = upcoming ? `<div class="routine"><div class="row"><b class="grow">${esc(upcoming.title)}</b><span class="tag">다음: ${nextDue(upcoming).slice(5).replace('-', '/')}(${DAYS[upcoming.day]}) ${upcoming.time}</span></div>
-      ${msgBox(upcoming, nextDue(upcoming))}
+      ${hideText(upcoming) ? '' : msgBox(upcoming, nextDue(upcoming))}
       <div class="row" style="margin-top:8px">${copyBtn(upcoming)}${libraryText(upcoming, nextDue(upcoming)) ? '' : `<button class="btn sec sm" onclick="editRoutine('${upcoming.id}')">문구 수정</button>`}</div></div>` : '';
   $('routineCard').innerHTML = `<div class="row" style="margin-bottom:4px"><h3 class="grow" style="margin:0">📅 정기 문자</h3><button class="btn sec sm" onclick="manageRoutines()">관리 · 알람</button></div>
     ${libBtns}
