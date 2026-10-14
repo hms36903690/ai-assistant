@@ -749,8 +749,9 @@ function eduTag(e) {
     : d === 1 ? '<span class="tag today">내일</span>' : `<span class="tag">D-${d}</span>`;
 }
 const sortedEdu = () => [...db.edu].sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
-const eduItem = e => `<li class="item" onclick="showEdu('${e.id}')"><div class="avatar">📚</div>
-  <div class="body"><div class="name">${esc(e.title)}</div><div class="meta">${esc(eduWhen(e) + (e.place ? ' · ' + e.place : ''))}</div></div>${eduTag(e)}</li>`;
+const eduItem = (e, withDelete) => `<li class="item" onclick="showEdu('${e.id}')"><div class="avatar">📚</div>
+  <div class="body"><div class="name">${esc(e.title)}</div><div class="meta">${esc(eduWhen(e) + (e.place ? ' · ' + e.place : ''))}</div></div>${eduTag(e)}
+  ${withDelete === true ? `<button class="btn danger sm" onclick="event.stopPropagation();deleteEdu('${e.id}')" aria-label="삭제">🗑</button>` : ''}</li>`;
 function renderEduCard() {
   const up = sortedEdu().filter(e => e.date >= today());
   $('eduCard').innerHTML = `<div class="row" style="margin-bottom:4px"><h3 class="grow" style="margin:0">📚 교육 일정</h3>
@@ -762,7 +763,20 @@ function listEdu() {
   const all = sortedEdu(), up = all.filter(e => e.date >= today()), past = all.filter(e => e.date < today()).reverse();
   openSheet('교육 일정', `<button class="btn" style="width:100%;margin-bottom:12px" onclick="editEdu()">＋ 교육 등록</button>
     <div class="card"><h3>예정</h3><ul class="list">${up.map(eduItem).join('') || '<li class="empty">예정된 교육이 없습니다.</li>'}</ul></div>
-    ${past.length ? `<div class="card"><h3>지난 교육</h3><ul class="list">${past.slice(0, 20).map(eduItem).join('')}</ul></div>` : ''}`);
+    ${past.length ? `<div class="card"><div class="row" style="margin-bottom:6px"><h3 class="grow" style="margin:0">지난 교육 (${past.length})</h3>
+      <button class="btn danger sm" onclick="deletePastEdu()">모두 삭제</button></div>
+      <ul class="list">${past.map(e => eduItem(e, true)).join('')}</ul></div>` : ''}`);
+}
+// 지난 교육 바로 지우기 (🗑 한 번 누르면 삭제)
+function deleteEdu(id) {
+  db.edu = db.edu.filter(x => x.id !== id);
+  save(); refresh(); listEdu(); toast('삭제했습니다.');
+}
+function deletePastEdu() {
+  const n = db.edu.filter(e => e.date < today()).length;
+  if (!confirm(`지난 교육 ${n}건을 모두 삭제할까요?`)) return;
+  db.edu = db.edu.filter(e => e.date >= today());
+  save(); refresh(); listEdu(); toast(`지난 교육 ${n}건을 삭제했습니다.`);
 }
 function editEdu(id) {
   const e = db.edu.find(x => x.id === id) || {date: today()};
