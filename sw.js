@@ -1,6 +1,6 @@
 // 앱 화면 파일을 기기에 저장해 두어 인터넷이 없어도 열리게 합니다.
 // 새 버전을 올릴 때는 아래 버전 숫자를 올려 주세요. (예: v2 → v3)
-const CACHE = 'hmsfc-v5';
+const CACHE = 'hmsfc-v6';
 const FILES = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -23,6 +23,13 @@ self.addEventListener('fetch', e => {
     e.respondWith(fetch(req)
       .then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put('./index.html', copy)); return res; })
       .catch(() => caches.match('./index.html')));
+    return;
+  }
+  // 월요일 문구 모음은 매달 바뀌므로 항상 최신 것을 먼저 받아옵니다.
+  if (new URL(req.url).pathname.endsWith('monday-messages.json')) {
+    e.respondWith(fetch(req)
+      .then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; })
+      .catch(() => caches.match(req, {ignoreSearch: true})));
     return;
   }
   e.respondWith(caches.match(req).then(r => r || fetch(req)));
