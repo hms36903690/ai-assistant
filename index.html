@@ -153,6 +153,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <main class="main">
   <header class="top">
     <h1 id="pageTitle">홈</h1>
+    <button class="icon-btn" id="syncDot" style="display:none" onclick="openSettings()" aria-label="동기화 상태">☁️</button>
     <button class="icon-btn" onclick="openSettings()" aria-label="설정">⚙️</button>
   </header>
 
@@ -275,25 +276,52 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.14-23';
+const APP_VERSION = '2026.10.14-24';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적'};
 
 function defaults() {
-  return {settings: {fcName: '현미숙 FC', signature: '삼성생명 FC 현미숙 드림', lastBackup: ''}, customers: [], dbleads: [], prospects: [], ceos: [], goals: {}, perf: [], routines: defaultRoutines(), routineLog: {}, edu: [], tasks: []};
+  return {settings: {fcName: '현미숙 FC', signature: '삼성생명 FC 현미숙 드림', lastBackup: ''}, customers: [], dbleads: [], prospects: [], ceos: [], goals: {}, perf: [], routines: defaultRoutines(), routineLog: {}, edu: [], tasks: [], _sync: {del: {}, keys: {}, settingsAt: 0}};
 }
 function load() {
   try {
     const d = JSON.parse(localStorage.getItem(KEY));
-    if (d) { const base = defaults(); return {...base, ...d, settings: {...base.settings, ...d.settings}}; }
+    if (d) { const base = defaults(); return {...base, ...d, settings: {...base.settings, ...d.settings}, _sync: {...base._sync, ...d._sync}}; }
   } catch (e) {}
   return defaults();
 }
 let db = load();
+// 동기화를 위해 무엇이 언제 바뀌었는지 기록합니다 (항목마다 _u = 고친 시각, 지운 항목은 _sync.del)
+const COLLS = ['customers', 'dbleads', 'prospects', 'ceos', 'perf', 'edu', 'tasks', 'routines'];
+const MAPS = ['goals', 'routineLog'];
+const clone = o => JSON.parse(JSON.stringify(o));
+const bare = r => { const {_u, ...rest} = r; return JSON.stringify(rest); };
+let lastSnap = clone(db);
+function stampChanges() {
+  const now = Date.now(), sy = db._sync = db._sync || {del: {}, keys: {}, settingsAt: 0};
+  sy.del = sy.del || {}; sy.keys = sy.keys || {};
+  COLLS.forEach(c => {
+    const prev = {}; (lastSnap[c] || []).forEach(r => { prev[r.id] = bare(r); });
+    const cur = new Set();
+    (db[c] || []).forEach(r => { cur.add(r.id); if (prev[r.id] !== bare(r)) r._u = now; });
+    Object.keys(prev).forEach(id => { if (!cur.has(id)) sy.del[id] = now; });
+  });
+  MAPS.forEach(m => {
+    const a = lastSnap[m] || {}, b = db[m] || {};
+    new Set([...Object.keys(a), ...Object.keys(b)]).forEach(k => {
+      if (JSON.stringify(a[k]) !== JSON.stringify(b[k])) sy.keys[m + '|' + k] = {t: now, del: !(k in b)};
+    });
+  });
+  if (JSON.stringify(lastSnap.settings) !== JSON.stringify(db.settings)) sy.settingsAt = now;
+}
+function writeLocal() {
+  try { localStorage.setItem(KEY, JSON.stringify(db)); lastSnap = clone(db); return true; }
+  catch (e) { alert('저장에 실패했습니다. 저장 공간을 확인하고 백업 파일을 내보내 주세요.'); return false; }
+}
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(db)); }
-  catch (e) { alert('저장에 실패했습니다. 저장 공간을 확인하고 백업 파일을 내보내 주세요.'); }
+  stampChanges();
+  if (writeLocal() && SYNC.on) schedulePush();
 }
 
 /* ───────── 작은 도우미 함수 ───────── */
@@ -1269,12 +1297,13 @@ function openSettings() {
       <p class="muted">상담 문구의 서명에 사용됩니다.</p>
       <label style="margin-top:8px">생일 축하문자 끝인사</label>
       <div class="row"><input id="setSig" class="grow" value="${esc(db.settings.signature)}" style="flex:1"><button class="btn" onclick="db.settings.signature=$('setSig').value.trim()||'삼성생명 FC 현미숙 드림';save();refresh();toast('저장했습니다.')">저장</button></div></div>
+    <div class="card" id="syncCard">${syncCardHtml()}</div>
     <div class="card"><h3>💾 백업</h3>
       <p class="muted" style="margin-top:0">데이터는 이 기기의 이 브라우저 안에만 저장됩니다. 브라우저 기록을 지우거나 기기를 바꾸면 사라지니, 정기적으로 백업 파일을 내보내 안전한 곳에 보관하세요. 다른 기기로 옮길 때도 이 파일을 불러오면 됩니다.</p>
       <p class="muted">마지막 백업: ${db.settings.lastBackup || '없음'}</p>
       <div class="row"><button class="btn grow" onclick="exportData()">백업 파일 내보내기</button><button class="btn sec grow" onclick="$('importFile').click()">백업 불러오기</button></div></div>
     <div class="card"><h3>🔒 개인정보 안내</h3>
-      <p class="muted" style="margin:0">고객 정보는 서버로 전송되지 않습니다. 다만 휴대폰 분실에 대비해 화면 잠금을 꼭 사용하시고, 백업 파일은 카톡·메일 등으로 공유하지 마세요. 실제 업무 사용 전 회사의 개인정보·보안 규정을 확인하세요.</p></div>
+      <p class="muted" style="margin:0">동기화를 켜지 않으면 고객 정보는 서버로 전송되지 않습니다. 동기화를 켜면 내가 정한 비밀번호로 잠근(암호화한) 상태로만 올라갑니다. 다만 휴대폰 분실에 대비해 화면 잠금을 꼭 사용하시고, 백업 파일은 카톡·메일 등으로 공유하지 마세요. 실제 업무 사용 전 회사의 개인정보·보안 규정을 확인하세요.</p></div>
     <div class="card"><h3>📅 정기 문자 · 알람</h3><p class="muted" style="margin-top:0">매주 보내는 인사·상식 문자와 알람을 관리합니다.</p><button class="btn sec" onclick="manageRoutines()">정기 문자 관리</button></div>
     <div class="card"><h3>🔄 앱 업데이트</h3>
       <p class="muted" style="margin-top:0">현재 버전: <b>${APP_VERSION}</b><br>새 기능이 안 보이면 눌러 주세요. 고객 데이터는 지워지지 않습니다.</p>
@@ -1309,14 +1338,235 @@ function importData(input) {
 }
 function resetAll() {
   if (!confirm('모든 고객·실적·목표 데이터를 삭제합니다. 계속할까요?')) return;
-  if (!confirm('정말 삭제할까요? 백업 파일이 없으면 되돌릴 수 없습니다.')) return;
+  if (!confirm('정말 삭제할까요? 백업 파일이 없으면 되돌릴 수 없습니다.' + (SYNC.on ? '\n※ 동기화가 켜져 있어 다른 기기에서도 함께 지워집니다.' : ''))) return;
   db = defaults(); save(); closeSheet(); refresh(); toast('초기화했습니다.');
+}
+
+/* ───────── ☁️ 핸드폰 · 태블릿 동기화 ─────────
+   구글 계정으로 로그인 → 데이터를 '동기화 비밀번호'로 잠근(암호화) 뒤 Firebase에 올립니다.
+   서버에는 잠긴 데이터만 있어서, 비밀번호 없이는 아무도(구글도) 내용을 볼 수 없습니다. */
+const SYNC = {on: false, user: null, key: null, unsub: null, timer: null, busy: false, last: '', err: '', remoteExists: null};
+const LS = {cfg: 'hmsfc_fb_config', key: 'hmsfc_sync_key', dev: 'hmsfc_device'};
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+const DEVICE = lsGet(LS.dev) || (() => { const d = uid(); lsSet(LS.dev, d); return d; })();
+const syncCfg = () => { try { return JSON.parse(lsGet(LS.cfg)); } catch (e) { return null; } };
+// 두 기기의 데이터를 항목별로 합치기 (더 최근에 고친 쪽이 이김, 지운 항목은 지운 채로)
+function mergeDb(a, b) {
+  const base = defaults(), A = {...base, ...a}, B = {...base, ...b};
+  const sa = A._sync || {}, sb = B._sync || {};
+  const del = {...(sa.del || {})};
+  Object.entries(sb.del || {}).forEach(([k, t]) => { if (!(del[k] >= t)) del[k] = t; });
+  const keys = {...(sa.keys || {})};
+  Object.entries(sb.keys || {}).forEach(([k, v]) => { if (!keys[k] || keys[k].t < v.t) keys[k] = v; });
+  const out = {...A, _sync: {del, keys, settingsAt: Math.max(sa.settingsAt || 0, sb.settingsAt || 0)}};
+  COLLS.forEach(c => {
+    const map = new Map();
+    [...(A[c] || []), ...(B[c] || [])].forEach(r => { const o = map.get(r.id); if (!o || (r._u || 0) > (o._u || 0)) map.set(r.id, r); });
+    out[c] = [...map.values()].filter(r => !(del[r.id] >= (r._u || 0)));
+  });
+  MAPS.forEach(m => {
+    const ka = sa.keys || {}, kb = sb.keys || {}, res = {};
+    new Set([...Object.keys(A[m] || {}), ...Object.keys(B[m] || {})]).forEach(k => {
+      const e = keys[m + '|' + k]; if (e && e.del) return;
+      const ta = (ka[m + '|' + k] || {}).t || 0, tb = (kb[m + '|' + k] || {}).t || 0;
+      const pick = tb > ta ? B[m] : A[m], other = tb > ta ? A[m] : B[m];
+      res[k] = k in (pick || {}) ? pick[k] : other[k];
+    });
+    out[m] = res;
+  });
+  out.settings = (sb.settingsAt || 0) > (sa.settingsAt || 0) ? {...base.settings, ...B.settings} : {...base.settings, ...A.settings};
+  return out;
+}
+// 암호화 (PBKDF2로 비밀번호 → 열쇠, AES-GCM으로 잠금, 가능하면 압축)
+const b64 = buf => { const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+const unb64 = str => Uint8Array.from(atob(str), c => c.charCodeAt(0));
+async function deriveKey(pw, salt) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name: 'PBKDF2', salt: unb64(salt), iterations: 250000, hash: 'SHA-256'}, base, {name: 'AES-GCM', length: 256}, true, ['encrypt', 'decrypt']);
+}
+const streamBytes = (bytes, ts) => new Response(new Blob([bytes]).stream().pipeThrough(ts)).arrayBuffer();
+async function encryptDb(obj) {
+  let data = new TextEncoder().encode(JSON.stringify(obj)), z = 0;
+  if (window.CompressionStream) { data = await streamBytes(data, new CompressionStream('gzip')); z = 1; }
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, SYNC.key, data);
+  return {iv: b64(iv), ct: b64(ct), z};
+}
+async function decryptDb(d, key = SYNC.key) {
+  let data = await crypto.subtle.decrypt({name: 'AES-GCM', iv: unb64(d.iv)}, key, unb64(d.ct));
+  if (d.z) {
+    if (!window.DecompressionStream) throw new Error('이 브라우저는 동기화 데이터를 열 수 없습니다. Chrome을 최신으로 업데이트해 주세요.');
+    data = await streamBytes(data, new DecompressionStream('gzip'));
+  }
+  return JSON.parse(new TextDecoder().decode(data));
+}
+// Firebase 불러오기 (동기화를 켤 때만)
+const loadScript = src => new Promise((ok, no) => { const el = document.createElement('script'); el.src = src; el.onload = ok; el.onerror = () => no(new Error('인터넷 연결을 확인해 주세요.')); document.head.appendChild(el); });
+async function initFirebase() {
+  if (window.firebase && firebase.apps && firebase.apps.length) return true;
+  const cfg = syncCfg(); if (!cfg) return false;
+  const v = '10.12.2', u = n => `https://www.gstatic.com/firebasejs/${v}/firebase-${n}-compat.js`;
+  if (!window.firebase || !firebase.initializeApp) await loadScript(u('app'));
+  if (!firebase.auth) await loadScript(u('auth'));
+  if (!firebase.firestore) await loadScript(u('firestore'));
+  firebase.initializeApp(cfg);
+  return true;
+}
+const docRef = () => firebase.firestore().collection('hmsfc').doc(SYNC.user.uid);
+function setSyncState(err) {
+  SYNC.err = err || '';
+  const dot = $('syncDot');
+  if (dot) { dot.style.display = syncCfg() && (SYNC.on || SYNC.err) ? '' : 'none'; dot.textContent = SYNC.err ? '⚠️' : '☁️'; dot.title = SYNC.err || '동기화 켜짐'; }
+  const card = $('syncCard'); if (card) card.innerHTML = syncCardHtml();
+}
+// 서버 데이터와 합쳐서 이 기기에 반영
+async function applyRemote(d) {
+  const remote = await decryptDb(d);
+  const merged = mergeDb(db, remote);
+  const changedHere = JSON.stringify(merged) !== JSON.stringify(db);
+  db = merged; writeLocal();
+  if (changedHere) refresh();
+  SYNC.last = new Date().toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'});
+  if (JSON.stringify(merged) !== JSON.stringify(remote)) schedulePush();
+  setSyncState();
+}
+function schedulePush() { clearTimeout(SYNC.timer); SYNC.timer = setTimeout(pushNow, 1500); }
+async function pushNow() {
+  if (!SYNC.on || SYNC.busy) { if (SYNC.on) schedulePush(); return; }
+  SYNC.busy = true;
+  try {
+    const ref = docRef(), salt = JSON.parse(lsGet(LS.key)).salt;
+    const merged = await firebase.firestore().runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      const m = snap.exists ? mergeDb(db, await decryptDb(snap.data())) : clone(db);
+      tx.set(ref, {...(await encryptDb(m)), salt, v: 1, device: DEVICE, updatedAt: Date.now()});
+      return m;
+    });
+    const changedHere = JSON.stringify(merged) !== JSON.stringify(db);
+    db = merged; writeLocal(); if (changedHere) refresh();
+    SYNC.last = new Date().toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'});
+    setSyncState();
+  } catch (e) { setSyncState('동기화 실패: ' + (e.message || e)); }
+  finally { SYNC.busy = false; }
+}
+function startListening() {
+  if (SYNC.unsub) SYNC.unsub();
+  SYNC.unsub = docRef().onSnapshot(snap => {
+    if (!snap.exists || snap.metadata.hasPendingWrites) return;
+    const d = snap.data(); if (d.device === DEVICE) return;
+    applyRemote(d).catch(e => setSyncState('동기화 실패: ' + (e.message || e)));
+  }, e => setSyncState('동기화 연결 끊김: ' + (e.message || e)));
+}
+// 저장해 둔 열쇠로 동기화 시작 (앱을 열 때 자동)
+async function startSync() {
+  const saved = (() => { try { return JSON.parse(lsGet(LS.key)); } catch (e) { return null; } })();
+  if (!saved || !SYNC.user || saved.uid !== SYNC.user.uid) return false;
+  SYNC.key = await crypto.subtle.importKey('jwk', saved.jwk, {name: 'AES-GCM'}, true, ['encrypt', 'decrypt']);
+  SYNC.on = true; setSyncState();
+  try {
+    const snap = await docRef().get();
+    if (snap.exists) await applyRemote(snap.data()); else await pushNow();
+    startListening();
+  } catch (e) { setSyncState('동기화 실패: ' + (e.message || e)); }
+  return true;
+}
+async function bootSync() {
+  if (location.protocol === 'file:') return;
+  if (!syncCfg()) {
+    // 저장소에 연결 설정 파일이 있으면 자동으로 사용
+    try { const r = await fetch('sync-config.json', {cache: 'no-cache'}); if (r.ok) lsSet(LS.cfg, JSON.stringify(await r.json())); } catch (e) {}
+  }
+  if (!syncCfg() || !lsGet(LS.key)) return;
+  try {
+    await initFirebase();
+    firebase.auth().onAuthStateChanged(async u => {
+      SYNC.user = u;
+      if (u && !SYNC.on) await startSync(); else setSyncState();
+    });
+  } catch (e) { setSyncState('동기화를 시작하지 못했어요: ' + e.message); }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && SYNC.on) docRef().get().then(s => s.exists && applyRemote(s.data())).catch(() => {});
+  });
+}
+// ── 설정 화면의 동기화 칸
+function syncCardHtml() {
+  const head = '<h3>☁️ 핸드폰 · 태블릿 동기화</h3>';
+  if (location.protocol === 'file:') return head + '<p class="muted" style="margin:0">인터넷 주소(https)로 연 앱에서만 쓸 수 있어요.</p>';
+  const err = SYNC.err ? `<div class="notice">${esc(SYNC.err)}</div>` : '';
+  if (!syncCfg()) return head + `<p class="muted" style="margin-top:0">아직 연결 설정이 없어요. 안내에 따라 Firebase를 만든 뒤, 받은 <b>firebaseConfig</b> 내용을 아래에 붙여넣으세요.</p>
+    <textarea id="fbCfg" style="min-height:120px;font-size:13px" placeholder="const firebaseConfig = {&#10;  apiKey: &quot;...&quot;,&#10;  authDomain: &quot;...&quot;,&#10;  projectId: &quot;...&quot;,&#10;  appId: &quot;...&quot;&#10;};"></textarea>
+    <button class="btn" style="margin-top:8px" onclick="saveFbCfg()">연결 설정 저장</button>`;
+  if (SYNC.on) return head + err + `<p style="margin:0 0 8px">✅ <b>동기화 켜짐</b><br><span class="muted">${esc(SYNC.user ? SYNC.user.email : '')}${SYNC.last ? ' · 마지막 동기화 ' + SYNC.last : ''}</span></p>
+    <p class="muted" style="margin-top:0">이 기기에서 고친 내용이 다른 기기에도 자동으로 반영됩니다.</p>
+    <div class="row"><button class="btn sec grow" onclick="syncNowBtn()">지금 동기화</button><button class="btn danger" onclick="syncOff()">이 기기 동기화 끄기</button></div>`;
+  if (!SYNC.user) return head + err + `<p class="muted" style="margin-top:0">핸드폰과 태블릿에서 <b>같은 구글 계정</b>으로 로그인하면 고객 정보가 자동으로 맞춰집니다.</p>
+    <button class="btn" onclick="syncLogin()">구글 계정으로 로그인</button>
+    <p class="muted" style="margin-bottom:0"><a href="#" onclick="if(confirm('연결 설정을 지울까요?')){lsSet(LS.cfg,null);setSyncState()}return false">연결 설정 다시 하기</a></p>`;
+  const first = SYNC.remoteExists === false;
+  return head + err + `<p style="margin-top:0">${esc(SYNC.user.email)} 로그인됨</p>
+    <p class="muted">${first ? '<b>동기화 비밀번호를 만들어 주세요.</b> 고객 정보를 잠그는 열쇠입니다. 다른 기기에서도 같은 비밀번호를 넣어야 하고, <b>잊으면 서버의 데이터를 열 수 없습니다.</b> (이 기기 데이터는 그대로 남아요)' : '<b>처음 기기에서 만든 동기화 비밀번호</b>를 넣어 주세요.'}</p>
+    <input type="password" id="syncPw" placeholder="동기화 비밀번호 (8자 이상)" autocomplete="new-password">
+    ${first ? '<input type="password" id="syncPw2" placeholder="한 번 더 입력" style="margin-top:6px" autocomplete="new-password">' : ''}
+    <div class="row" style="margin-top:8px"><button class="btn grow" onclick="syncSetPassword()">${first ? '비밀번호 만들고 동기화 시작' : '동기화 시작'}</button>
+    <button class="btn sec" onclick="firebase.auth().signOut()">로그아웃</button></div>`;
+}
+function saveFbCfg() {
+  const t = $('fbCfg').value;
+  const get = k => (t.match(new RegExp(k + '["\']?\\s*:\\s*["\']([^"\']+)["\']')) || [])[1];
+  const cfg = {apiKey: get('apiKey'), authDomain: get('authDomain'), projectId: get('projectId'), appId: get('appId'), storageBucket: get('storageBucket'), messagingSenderId: get('messagingSenderId')};
+  if (!cfg.apiKey || !cfg.projectId || !cfg.authDomain) return alert('apiKey, authDomain, projectId가 보이지 않아요. firebaseConfig 내용을 그대로 붙여넣어 주세요.');
+  Object.keys(cfg).forEach(k => cfg[k] || delete cfg[k]);
+  lsSet(LS.cfg, JSON.stringify(cfg)); toast('연결 설정을 저장했어요.'); setSyncState();
+}
+async function syncLogin() {
+  try {
+    await initFirebase();
+    const res = await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    SYNC.user = res.user;
+    firebase.auth().onAuthStateChanged(u => { SYNC.user = u; if (!u) { SYNC.on = false; } setSyncState(); });
+    if (!(await startSync())) {
+      const snap = await docRef().get(); SYNC.remoteExists = snap.exists;
+    }
+    setSyncState();
+  } catch (e) { setSyncState('로그인 실패: ' + (e.message || e)); }
+}
+async function syncSetPassword() {
+  const pw = $('syncPw').value;
+  if (pw.length < 8) return alert('비밀번호는 8자 이상으로 해 주세요.');
+  try {
+    const snap = await docRef().get();
+    let salt;
+    if (snap.exists) {
+      salt = snap.data().salt;
+      const key = await deriveKey(pw, salt);
+      try { await decryptDb(snap.data(), key); } catch (e) { return alert('비밀번호가 맞지 않아요. 처음 기기에서 만든 동기화 비밀번호를 넣어 주세요.'); }
+      SYNC.key = key;
+    } else {
+      if ($('syncPw2') && $('syncPw2').value !== pw) return alert('두 비밀번호가 서로 달라요.');
+      salt = b64(crypto.getRandomValues(new Uint8Array(16)));
+      SYNC.key = await deriveKey(pw, salt);
+    }
+    lsSet(LS.key, JSON.stringify({uid: SYNC.user.uid, salt, jwk: await crypto.subtle.exportKey('jwk', SYNC.key)}));
+    await startSync();
+    toast('동기화를 켰어요 ☁️');
+  } catch (e) { setSyncState('동기화 실패: ' + (e.message || e)); }
+}
+function syncNowBtn() { if (!SYNC.on) return; docRef().get().then(s => s.exists ? applyRemote(s.data()) : pushNow()).then(() => toast('동기화했어요.')).catch(e => setSyncState('동기화 실패: ' + (e.message || e))); }
+async function syncOff() {
+  if (!confirm('이 기기의 동기화를 끌까요?\n이 기기 데이터와 서버 데이터는 그대로 남고, 앞으로 서로 맞춰지지 않습니다.')) return;
+  if (SYNC.unsub) SYNC.unsub();
+  Object.assign(SYNC, {on: false, key: null, unsub: null, remoteExists: null});
+  lsSet(LS.key, null);
+  try { await firebase.auth().signOut(); } catch (e) {}
+  SYNC.user = null; setSyncState(); toast('이 기기 동기화를 껐어요.');
 }
 
 /* ───────── 시작 ───────── */
 cleanTasks();
 showPage(location.hash.slice(1) || 'home');
 loadLibs();
+bootSync();
 // 첫 화면: 앱을 처음 열 때만 잠깐 보여 주고 사라집니다 (누르면 바로 닫힘)
 function hideSplash() { const s = $('splash'); if (!s) return; s.classList.add('hide'); setTimeout(() => s.remove(), 500); }
 (() => {
