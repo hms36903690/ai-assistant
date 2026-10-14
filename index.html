@@ -626,9 +626,6 @@ const BDAY_TEMPLATES = {
     '{이름}님, {생일} 축하드려요!\n따뜻한 차 한잔처럼 포근한 하루 보내세요.\n올 한 해도 건강하고 행복한 일만 가득하시길 바랍니다.',
     '{이름}님, 오늘 {생일} 정말 축하드립니다.\n찬 바람에 몸 따뜻하게 챙기시고, 소중한 분들과 즐거운 시간 보내세요.\n늘 응원하겠습니다.',
   ],
-  sixty: [
-    '{이름}님, 환갑을 진심으로 축하드립니다 🎉\n건강하게 맞이하신 뜻깊은 날, 가족분들과 함께 행복한 시간 보내세요.\n앞으로도 늘 건강하시고 좋은 일만 가득하시길 바랍니다.',
-  ],
 };
 const bdayShift = {};
 const seasonOf = m => m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' : m >= 9 && m <= 11 ? 'autumn' : 'winter';
@@ -636,7 +633,7 @@ const seasonOf = m => m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' 
 const bdayAge = c => Number(nextBirthday(c.birth).slice(0, 4)) - Number(c.birth.slice(0, 4));
 function bdayText(c, shift = 0) {
   const nb = nextBirthday(c.birth), turning = bdayAge(c);
-  const list = turning === 60 ? BDAY_TEMPLATES.sixty : BDAY_TEMPLATES[seasonOf(Number(c.birth.slice(5, 7)))];
+  const list = BDAY_TEMPLATES[seasonOf(Number(c.birth.slice(5, 7)))];
   // 고객·해마다 다른 문구가 나오도록 고르고, '다른 문구'를 누르면 다음 문구로
   const seed = [...c.name].reduce((n, ch) => n + ch.charCodeAt(0), 0) + Number(nb.slice(0, 4));
   return list[(seed + shift) % list.length].replace(/\{이름\}/g, c.name)
