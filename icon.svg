@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
 <rect width="512" height="512" rx="110" fill="#102a43"/>
-<circle cx="256" cy="205" r="105" fill="#fff"/>
-<text x="256" y="240" text-anchor="middle" font-family="Arial,sans-serif" font-size="100" font-weight="700" fill="#102a43">HM</text>
-<text x="256" y="390" text-anchor="middle" font-family="Arial,sans-serif" font-size="56" font-weight="700" fill="#fff">FC</text>
+<rect x="96" y="318" width="320" height="6" rx="3" fill="#f59e0b"/>
+<text x="256" y="290" text-anchor="middle" font-family="'Liberation Sans',Arial,Helvetica,sans-serif" font-size="150" font-weight="700" letter-spacing="4" fill="#fff">HMS</text>
+<text x="256" y="388" text-anchor="middle" font-family="'Liberation Sans',Arial,Helvetica,sans-serif" font-size="52" font-weight="700" letter-spacing="10" fill="#cbd5e1">FC</text>
 </svg>
