@@ -94,6 +94,12 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 .task input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--ok)}
 .task .txt{flex:1;min-width:0;word-break:break-all}
 .task.done .txt{text-decoration:line-through;color:var(--sub)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:0 0 10px;-webkit-overflow-scrolling:touch}
+.chips button{flex:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--ink)}
+.month-head{scroll-margin-top:calc(124px + env(safe-area-inset-top));position:sticky;top:calc(124px + env(safe-area-inset-top));z-index:2;background:#eef2f7;margin:10px -15px 0;padding:8px 15px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.month-head:first-child{margin-top:-15px;border-top:0;border-radius:15px 15px 0 0}
+.month-head b{font-size:15px}
+.month-head .muted{flex:1;text-align:right;font-size:12px}
 .tag.done{background:#dcfce7;color:var(--ok)}
 .tag.s-new{background:#dbeafe;color:#1d4ed8}
 .tag.s-miss{background:#ffedd5;color:var(--warn)}
@@ -216,6 +222,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
       <button class="btn" onclick="editDb()">＋</button>
     </div>
     <div class="stats" id="dbStats" style="grid-template-columns:repeat(4,1fr)"></div>
+    <div class="chips" id="dbMonths"></div>
     <div class="card"><ul class="list" id="dbList"></ul></div>
   </section>
 
@@ -276,7 +283,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.14-24';
+const APP_VERSION = '2026.10.14-25';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적'};
@@ -1031,9 +1038,23 @@ function renderDb() {
   const cnt = s => db.dbleads.filter(d => d.status === s).length;
   $('dbStats').innerHTML = [['미연락', cnt('미연락')], ['부재', cnt('부재')], ['약속', cnt('약속잡음')], ['전체', db.dbleads.length]]
     .map(([k, v]) => `<div class="stat" style="padding:9px 10px"><small>${k}</small><b style="font-size:19px">${v}</b></div>`).join('');
-  $('dbList').innerHTML = list.length ? list.map(d => personItem('d', d,
-      esc([d.interest, d.received && '받은 날 ' + d.received.slice(5), d.calls && '통화 시도 ' + d.calls + '회', d.next && '다음 ' + d.next.slice(5)].filter(Boolean).join(' · ') || d.phone || ''),
-      dbTag(d.status) + starBtn('d', d))).join('')
+  // 받은 달별로 묶어서 보여 주기 (최근 달이 위)
+  const monthOf = d => (d.received || d.created || '').slice(0, 7);
+  const groups = {};
+  list.forEach(d => { (groups[monthOf(d) || '날짜 없음'] = groups[monthOf(d) || '날짜 없음'] || []).push(d); });
+  const months = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+  const mLabel = m => m === '날짜 없음' ? m : `${m.slice(0, 4)}년 ${+m.slice(5)}월`;
+  const converted = m => db.customers.filter(c => c.fromDb && c.fromDb.slice(0, 7) === m).length;
+  const summary = (m, arr) => {
+    const c = s2 => arr.filter(d => d.status === s2).length, cv = converted(m);
+    return [c('미연락') && `미연락 ${c('미연락')}`, c('부재') && `부재 ${c('부재')}`, c('약속잡음') && `약속 ${c('약속잡음')}`, cv && `고객 전환 ${cv}`].filter(Boolean).join(' · ');
+  };
+  $('dbMonths').innerHTML = months.length > 1 ? months.map(m => `<button onclick="document.getElementById('dbm-${m}').scrollIntoView({behavior:'smooth',block:'start'})">${m === '날짜 없음' ? m : (m.slice(0, 4) === today().slice(0, 4) ? '' : m.slice(2, 4) + '년 ') + (+m.slice(5)) + '월'} · ${groups[m].length + converted(m)}명</button>`).join('') : '';
+  $('dbList').innerHTML = list.length ? months.map(m => `
+    <li class="month-head" id="dbm-${m}"><b>📅 ${mLabel(m)}</b><span class="tag">${groups[m].length + converted(m)}명</span><span class="muted">${summary(m, groups[m])}</span></li>
+    ${groups[m].map(d => personItem('d', d,
+      esc([d.interest, d.received && '받은 날 ' + d.received.slice(5).replace('-', '/'), d.calls && '통화 ' + d.calls + '회', d.next && '다음 ' + d.next.slice(5).replace('-', '/')].filter(Boolean).join(' · ') || d.phone || ''),
+      dbTag(d.status) + starBtn('d', d))).join('')}`).join('')
     : `<li class="empty">${db.dbleads.length ? '해당하는 DB고객이 없습니다.' : '보험앱으로 들어온 신청서를 📋 버튼으로 붙여넣거나 ＋로 등록하세요.'}</li>`;
 }
 function editDb(id, prefill) {
@@ -1081,7 +1102,7 @@ function convertDb(id) {
   const birth = /^\d{4}-\d{2}-\d{2}$/.test(d.age || '') ? d.age : '';
   const c = {
     id: uid(), created: today(), name: d.name, phone: d.phone, birth, stage: d.status === '약속잡음' ? '상담중' : '관심',
-    product: d.interest, next: d.next, logs: d.logs || [], star: d.star,
+    product: d.interest, next: d.next, logs: d.logs || [], star: d.star, fromDb: d.received || d.created || today(),
     memo: [`DB고객 (${d.source || '출처 없음'}, 받은 날 ${d.received || '-'})`, !birth && d.age && `나이: ${d.age}`, d.memo].filter(Boolean).join('\n'),
   };
   db.customers.push(c);
