@@ -57,7 +57,7 @@ button{cursor:pointer}
 .card h3{margin:0 0 10px;font-size:16px}
 .muted{color:var(--sub);font-size:13px}
 .empty{color:var(--sub);text-align:center;padding:18px 0;font-size:14px}
-.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
 .quick button{min-height:54px;border:1px solid var(--line);background:#fff;border-radius:12px;font-weight:700;font-size:14px}
 .notice{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:12px}
 
@@ -90,6 +90,9 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 .tag.overdue{background:#fee2e2;color:var(--bad)}
 .tag.today{background:#ffedd5;color:var(--warn)}
 .tag.bday{background:#fce7f3;color:#be185d}
+.star{border:0;background:transparent;font-size:22px;line-height:1;padding:6px;color:#cbd5e1;flex:none}
+.star.on{color:#f59e0b}
+.btn.sec.on{background:#fef3c7;border-color:#fcd34d;color:#92400e}
 
 .progress{margin-bottom:12px}
 .progress .lbl{display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px}
@@ -119,6 +122,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
   <div class="brand">현미숙 FC 영업비서</div>
   <button data-page="home">🏠 홈</button>
   <button data-page="customers">👥 고객</button>
+  <button data-page="prospects">🌱 가망고객</button>
   <button data-page="ceo">🏢 CEO</button>
   <button data-page="goals">🎯 목표</button>
   <button data-page="perf">📊 실적</button>
@@ -137,6 +141,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
     <div class="stats" id="homeStats"></div>
     <div class="quick">
       <button onclick="editCustomer()">＋ 고객</button>
+      <button onclick="editProspect()">＋ 가망</button>
       <button onclick="editCeo()">＋ CEO</button>
       <button onclick="editPerf()">＋ 실적</button>
     </div>
@@ -144,13 +149,15 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
       <div class="card"><h3>오늘 할 일</h3><ul class="list" id="todoList"></ul></div>
       <div class="card"><h3>이번 달 목표</h3><div id="homeGoals"></div></div>
     </div>
+    <div class="card"><h3>⭐ 관심고객</h3><ul class="list" id="starList"></ul></div>
   </section>
 
   <!-- 개인 고객 -->
   <section class="page" id="page-customers">
     <div class="toolbar">
       <input id="custSearch" placeholder="이름·연락처·메모 검색" oninput="renderCustomers()">
-      <select id="custStage" onchange="renderCustomers()" style="max-width:120px"></select>
+      <select id="custStage" onchange="renderCustomers()" style="max-width:110px"></select>
+      <button class="btn sec" id="custStarBtn" onclick="starOnly.c=!starOnly.c;renderCustomers()" aria-label="관심고객만 보기">☆</button>
       <button class="btn" onclick="editCustomer()">＋</button>
     </div>
     <div class="card"><ul class="list" id="custList"></ul></div>
@@ -160,9 +167,20 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
   <section class="page" id="page-ceo">
     <div class="toolbar">
       <input id="ceoSearch" placeholder="회사명·대표자 검색" oninput="renderCeos()">
+      <button class="btn sec" id="ceoStarBtn" onclick="starOnly.ceo=!starOnly.ceo;renderCeos()" aria-label="관심고객만 보기">☆</button>
       <button class="btn" onclick="editCeo()">＋</button>
     </div>
     <div class="card"><ul class="list" id="ceoList"></ul></div>
+  </section>
+
+  <!-- 가망고객 (아직 상담 전) -->
+  <section class="page" id="page-prospects">
+    <div class="toolbar">
+      <input id="prosSearch" placeholder="이름·소개자·메모 검색" oninput="renderProspects()">
+      <button class="btn" onclick="editProspect()">＋</button>
+    </div>
+    <p class="muted" style="margin:0 2px 10px">아직 상담 전인 분들을 가볍게 적어 두는 곳입니다. 상담이 시작되면 <b>정식 고객으로 전환</b>을 누르세요.</p>
+    <div class="card"><ul class="list" id="prosList"></ul></div>
   </section>
 
   <!-- 목표 -->
@@ -192,6 +210,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <nav class="bottom-nav" id="bottomNav">
   <button data-page="home"><span>🏠</span>홈</button>
   <button data-page="customers"><span>👥</span>고객</button>
+  <button data-page="prospects"><span>🌱</span>가망</button>
   <button data-page="ceo"><span>🏢</span>CEO</button>
   <button data-page="goals"><span>🎯</span>목표</button>
   <button data-page="perf"><span>📊</span>실적</button>
@@ -211,10 +230,10 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 const KEY = 'hmsfc_app_v2';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
-const PAGES = {home: '홈', customers: '고객', ceo: 'CEO 고객', goals: '목표', perf: '실적'};
+const PAGES = {home: '홈', customers: '고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적'};
 
 function defaults() {
-  return {settings: {fcName: '현미숙 FC', lastBackup: ''}, customers: [], ceos: [], goals: {}, perf: []};
+  return {settings: {fcName: '현미숙 FC', lastBackup: ''}, customers: [], prospects: [], ceos: [], goals: {}, perf: []};
 }
 function load() {
   try {
@@ -286,7 +305,7 @@ document.querySelectorAll('[data-page]').forEach(b => b.addEventListener('click'
 window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
 
 function render(id) {
-  ({home: renderHome, customers: renderCustomers, ceo: renderCeos, goals: renderGoals, perf: renderPerf})[id]();
+  ({home: renderHome, customers: renderCustomers, prospects: renderProspects, ceo: renderCeos, goals: renderGoals, perf: renderPerf})[id]();
 }
 function refresh() { render(location.hash.slice(1) in PAGES ? location.hash.slice(1) : 'home'); }
 
@@ -319,6 +338,31 @@ function readForm(fields) {
   return o;
 }
 
+/* ───────── 고객 종류 공통 (c = 개인, ceo = 법인, p = 가망) ───────── */
+const findPerson = (kind, id) => ({c: db.customers, ceo: db.ceos, p: db.prospects})[kind].find(x => x.id === id);
+const SHOW = {c: id => showCustomer(id), ceo: id => showCeo(id), p: id => showProspect(id)};
+const personName = (kind, p) => kind === 'ceo' ? p.company : p.name;
+function personItem(kind, p, meta, right) {
+  const avatar = kind === 'ceo' ? '🏢' : kind === 'p' ? '🌱' : esc(p.name.slice(0, 1));
+  return `<li class="item" onclick="SHOW['${kind}']('${p.id}')"><div class="avatar">${avatar}</div>
+    <div class="body"><div class="name">${esc(personName(kind, p))}</div><div class="meta">${meta}</div></div>${right || ''}</li>`;
+}
+// ⭐ 관심고객 표시
+let starOnly = {c: false, ceo: false};
+const starBtn = (kind, p) => `<button class="star${p.star ? ' on' : ''}" onclick="event.stopPropagation();toggleStar('${kind}','${p.id}')" aria-label="관심고객 표시">★</button>`;
+function toggleStar(kind, id, reopen) {
+  const p = findPerson(kind, id); p.star = !p.star;
+  save(); refresh(); toast(p.star ? '⭐ 관심고객으로 표시했습니다.' : '관심고객 표시를 뺐습니다.');
+  if (reopen) SHOW[kind](id);
+}
+const starToggleBtn = (kind, p) => `<button class="btn sec${p.star ? ' on' : ''}" style="width:100%;margin-bottom:12px" onclick="toggleStar('${kind}','${p.id}',true)">${p.star ? '★ 관심고객 (누르면 해제)' : '☆ 관심고객으로 표시'}</button>`;
+const contactRow = phone => phone ? `<div class="row" style="margin-bottom:12px"><a class="btn grow" href="${telHref(phone)}" style="text-align:center;text-decoration:none">📞 전화</a><a class="btn sec grow" href="${smsHref(phone)}" style="text-align:center;text-decoration:none">💬 문자</a></div>` : '';
+const infoCard = rows => `<div class="card">${rows.filter(r => r[1]).map(([k, v]) => `<div style="margin-bottom:6px"><span class="muted">${k}</span><br>${esc(v).replace(/\n/g, '<br>')}</div>`).join('') || '<span class="muted">입력된 정보가 없습니다.</span>'}</div>`;
+const templateCard = (kind, p) => `<div class="card"><h3>✨ 상담 문구 만들기</h3>
+  <div class="ai-buttons">${Object.keys(TEMPLATES[kind]).map(k => `<button class="btn sec" onclick="makeText('${kind}','${p.id}','${k}')">${k}</button>`).join('')}</div>
+  <textarea id="aiOut" placeholder="위 버튼을 누르면 문구가 만들어집니다. 자유롭게 고쳐서 쓰세요."></textarea>
+  <div class="row" style="margin-top:8px"><button class="btn grow" onclick="copyText($('aiOut').value)">복사하기</button></div></div>`;
+
 /* ───────── 홈 ───────── */
 function todoItems() {
   const t = today(), items = [];
@@ -327,6 +371,7 @@ function todoItems() {
   };
   db.customers.forEach(c => add(c, 'c'));
   db.ceos.forEach(c => add(c, 'ceo'));
+  db.prospects.forEach(c => add(c, 'p'));
   db.customers.forEach(c => {
     const d = daysToBirthday(c.birth);
     if (d !== null && d <= 7) items.push({p: c, kind: 'c', tag: `<span class="tag bday">🎂 ${d === 0 ? '오늘 생일' : d + '일 후 생일'}</span>`, sort: 'b' + pad(d)});
@@ -350,7 +395,8 @@ function renderHome() {
   $('todayText').textContent = now.toLocaleDateString('ko-KR', {year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
 
   const lb = db.settings.lastBackup, total = db.customers.length + db.ceos.length;
-  $('backupNotice').innerHTML = total && (!lb || dayDiff(lb, today()) >= 14)
+  const hasData = total + db.prospects.length;
+  $('backupNotice').innerHTML = hasData && (!lb || dayDiff(lb, today()) >= 14)
     ? `<div class="notice">💾 ${lb ? `마지막 백업이 ${dayDiff(lb, today())}일 전입니다.` : '아직 백업한 적이 없습니다.'} <a href="#" onclick="exportData();return false">지금 백업하기</a></div>` : '';
 
   const s = monthStats(thisMonth()), todo = todoItems();
@@ -359,12 +405,14 @@ function renderHome() {
     ['이번 달 상담', s.consult + '건'], ['이번 달 계약', s.contract + '건'],
   ].map(([k, v]) => `<div class="stat"><small>${k}</small><b>${v}</b></div>`).join('');
 
-  $('todoList').innerHTML = todo.length ? todo.map(({p, kind, tag}) => `
-    <li class="item" onclick="${kind === 'c' ? 'showCustomer' : 'showCeo'}('${p.id}')">
-      <div class="avatar">${kind === 'c' ? esc(p.name.slice(0, 1)) : '🏢'}</div>
-      <div class="body"><div class="name">${esc(kind === 'c' ? p.name : p.company)}</div>
-      <div class="meta">${esc(p.nextTodo || p.memo || '')}</div></div>${tag}</li>`).join('')
+  $('todoList').innerHTML = todo.length ? todo.map(({p, kind, tag}) => personItem(kind, p, esc(p.nextTodo || p.memo || ''), tag)).join('')
     : '<li class="empty">오늘 연락할 고객이 없습니다 👍</li>';
+
+  const stars = [...db.customers.filter(c => c.star).map(p => ['c', p]), ...db.ceos.filter(c => c.star).map(p => ['ceo', p])]
+    .sort((a, b) => (a[1].next || '9999').localeCompare(b[1].next || '9999'));
+  $('starList').innerHTML = stars.length
+    ? stars.map(([kind, p]) => personItem(kind, p, esc(p.next ? '다음 연락 ' + p.next + (p.nextTodo ? ' · ' + p.nextTodo : '') : (p.stage || (p.issues || []).join(', '))), starBtn(kind, p))).join('')
+    : '<li class="empty">고객 목록에서 ☆를 누르면 여기에 모입니다.</li>';
 
   $('homeGoals').innerHTML = goalBars(thisMonth());
 }
@@ -385,16 +433,20 @@ function renderCustomers() {
   const sel = $('custStage');
   if (!sel.options.length) sel.innerHTML = '<option value="">전체 단계</option>' + STAGES.map(s => `<option>${s}</option>`).join('');
   const q = $('custSearch').value.trim().toLowerCase(), st = sel.value;
+  setStarFilterBtn('custStarBtn', starOnly.c);
   const list = db.customers
-    .filter(c => (!st || c.stage === st) && (!q || [c.name, c.phone, c.memo, c.product].join(' ').toLowerCase().includes(q)))
-    .sort((a, b) => (a.next || '9999').localeCompare(b.next || '9999') || a.name.localeCompare(b.name, 'ko'));
+    .filter(c => (!st || c.stage === st) && (!starOnly.c || c.star) && (!q || [c.name, c.phone, c.memo, c.product].join(' ').toLowerCase().includes(q)))
+    .sort((a, b) => !!b.star - !!a.star || (a.next || '9999').localeCompare(b.next || '9999') || a.name.localeCompare(b.name, 'ko'));
   $('custList').innerHTML = list.length ? list.map(c => `
     <li class="item" onclick="showCustomer('${c.id}')">
       <div class="avatar">${esc(c.name.slice(0, 1))}</div>
       <div class="body"><div class="name">${esc(c.name)} <span class="muted">${age(c.birth)}</span></div>
       <div class="meta">${esc([c.product, c.next && '다음 연락 ' + c.next].filter(Boolean).join(' · ') || c.phone || '')}</div></div>
-      <span class="tag">${esc(c.stage)}</span></li>`).join('')
-    : `<li class="empty">${db.customers.length ? '검색 결과가 없습니다.' : '첫 고객을 등록해 보세요. 오른쪽 위 ＋ 버튼'}</li>`;
+      <span class="tag">${esc(c.stage)}</span>${starBtn('c', c)}</li>`).join('')
+    : `<li class="empty">${!db.customers.length ? '첫 고객을 등록해 보세요. 오른쪽 위 ＋ 버튼' : starOnly.c ? '⭐ 관심고객이 없습니다. 고객 옆 ☆를 눌러 표시하세요.' : '검색 결과가 없습니다.'}</li>`;
+}
+function setStarFilterBtn(id, on) {
+  const b = $(id); b.textContent = on ? '★' : '☆'; b.classList.toggle('on', on);
 }
 function editCustomer(id) {
   const c = db.customers.find(x => x.id === id) || {};
@@ -413,14 +465,9 @@ function saveCustomer(id) {
 function showCustomer(id) {
   const c = db.customers.find(x => x.id === id); if (!c) return;
   const info = [['연락처', c.phone], ['생년월일', c.birth && `${c.birth} (${age(c.birth)})`], ['진행 단계', c.stage], ['관심 상품', c.product],
-    ['가족', c.family], ['다음 연락', c.next && `${c.next} ${c.nextTodo || ''}`], ['메모', c.memo]].filter(r => r[1]);
+    ['가족', c.family], ['다음 연락', c.next && `${c.next} ${c.nextTodo || ''}`], ['메모', c.memo]];
   openSheet(c.name + ' 고객', `
-    ${c.phone ? `<div class="row" style="margin-bottom:12px"><a class="btn grow" href="${telHref(c.phone)}" style="text-align:center;text-decoration:none">📞 전화</a><a class="btn sec grow" href="${smsHref(c.phone)}" style="text-align:center;text-decoration:none">💬 문자</a></div>` : ''}
-    <div class="card">${info.map(([k, v]) => `<div style="margin-bottom:6px"><span class="muted">${k}</span><br>${esc(v).replace(/\n/g, '<br>')}</div>`).join('') || '<span class="muted">입력된 정보가 없습니다.</span>'}</div>
-    <div class="card"><h3>✨ 상담 문구 만들기</h3>
-      <div class="ai-buttons">${Object.keys(CUST_TEMPLATES).map(k => `<button class="btn sec" onclick="makeText('c','${c.id}','${k}')">${k}</button>`).join('')}</div>
-      <textarea id="aiOut" placeholder="위 버튼을 누르면 문구가 만들어집니다. 자유롭게 고쳐서 쓰세요."></textarea>
-      <div class="row" style="margin-top:8px"><button class="btn grow" onclick="copyText($('aiOut').value)">복사하기</button></div></div>
+    ${contactRow(c.phone)}${starToggleBtn('c', c)}${infoCard(info)}${templateCard('c', c)}
     ${logsHtml(c, 'c')}
     <div class="row"><button class="btn sec grow" onclick="editCustomer('${c.id}')">수정</button><button class="btn danger" onclick="removeItem('customers','${c.id}')">삭제</button></div>`);
 }
@@ -437,19 +484,18 @@ function logsHtml(p, kind) {
     <button class="btn sec" onclick="addLog('${kind}','${p.id}')">기록 추가</button>
     <div style="margin-top:12px">${logs.map(l => `<div class="log"><b>${esc(l.date)} <a href="#" onclick="delLog('${kind}','${p.id}','${l.id}');return false" style="color:var(--sub)">삭제</a></b>${esc(l.note).replace(/\n/g, '<br>')}</div>`).join('') || '<div class="muted">아직 기록이 없습니다.</div>'}</div></div>`;
 }
-const findPerson = (kind, id) => (kind === 'c' ? db.customers : db.ceos).find(x => x.id === id);
 function addLog(kind, id) {
   const p = findPerson(kind, id), note = $('logNote').value.trim(), next = $('logNext').value;
   if (!note) return alert('상담 내용을 입력해 주세요.');
   (p.logs = p.logs || []).push({id: uid(), date: $('logDate').value || today(), note});
   if (next) p.next = next;
   save(); toast('상담 기록을 추가했습니다.');
-  (kind === 'c' ? showCustomer : showCeo)(id); refresh();
+  SHOW[kind](id); refresh();
 }
 function delLog(kind, id, logId) {
   if (!confirm('이 상담 기록을 삭제할까요?')) return;
   const p = findPerson(kind, id); p.logs = p.logs.filter(l => l.id !== logId);
-  save(); (kind === 'c' ? showCustomer : showCeo)(id); refresh();
+  save(); SHOW[kind](id); refresh();
 }
 function removeItem(coll, id) {
   if (!confirm('정말 삭제할까요? 되돌릴 수 없습니다.')) return;
@@ -488,9 +534,71 @@ const CEO_TEMPLATES = {
   },
   '미팅 후 감사': c => `${c.boss || ''} 대표님, 오늘 귀한 시간 내주셔서 감사합니다.\n말씀 나눈 내용은 정리해서 다시 안내드리겠습니다. 추가로 궁금하신 점 있으시면 언제든 연락 주세요.\n- ${db.settings.fcName}`,
 };
+const PROS_TEMPLATES = {
+  '첫 인사 (소개)': p => `${p.name}님, 안녕하세요. ${p.referrer ? p.referrer + '님 소개로' : '소개를 받아'} 연락드리는 ${db.settings.fcName}입니다.\n갑작스러운 연락에 놀라셨을 수도 있는데, 부담 갖지 마세요. 보험 관련해서 궁금한 점이 생기시면 언제든 편하게 물어봐 주세요. 앞으로 잘 부탁드립니다 😊`,
+  '첫 인사 (지인)': p => `${p.name}님, 잘 지내셨어요? ${db.settings.fcName}입니다.\n요즘 제가 보험설계 일을 하고 있어서 겸사겸사 안부 전해요. 보험 관련해서 궁금한 게 있으면 부담 없이 물어봐 주세요!`,
+  '만남 요청': p => `${p.name}님, 안녕하세요. ${db.settings.fcName}입니다.\n${p.interest ? p.interest + ' 관련해서' : '보험 관련해서'} 도움이 될 만한 내용을 간단히 정리해 드리고 싶은데, 커피 한잔하면서 20분 정도 시간 괜찮으실까요? 편하신 날 알려주세요.`,
+  '소개자 감사': p => `${p.referrer || ''}님, ${p.name}님을 소개해 주셔서 정말 감사합니다 🙏\n소개해 주신 마음 잊지 않고 정성껏 잘 챙겨 드리겠습니다.\n- ${db.settings.fcName}`,
+};
+const TEMPLATES = {c: CUST_TEMPLATES, ceo: CEO_TEMPLATES, p: PROS_TEMPLATES};
 function makeText(kind, id, key) {
-  const p = findPerson(kind, id);
-  $('aiOut').value = (kind === 'c' ? CUST_TEMPLATES : CEO_TEMPLATES)[key](p);
+  $('aiOut').value = TEMPLATES[kind][key](findPerson(kind, id));
+}
+
+/* ───────── 가망고객 (아직 상담 전인 분) ───────── */
+const PROS_FIELDS = [
+  {k: 'name', label: '이름 *'},
+  {k: 'phone', label: '연락처', type: 'tel', ph: '010-0000-0000'},
+  {k: 'referrer', label: '소개해 주신 분', ph: '예: 김민지 (없으면 비워 두기)'},
+  {k: 'interest', label: '관심 분야', ph: '예: 자녀보험, 노후 준비'},
+  {k: 'next', label: '연락 예정일', type: 'date'},
+  {k: 'memo', label: '메모', type: 'textarea', full: true, ph: '어떻게 알게 됐는지, 특징, 연락하기 좋은 시간 등'},
+];
+function renderProspects() {
+  const q = $('prosSearch').value.trim().toLowerCase();
+  const list = db.prospects.filter(p => !q || [p.name, p.phone, p.referrer, p.interest, p.memo].join(' ').toLowerCase().includes(q))
+    .sort((a, b) => (a.next || '9999').localeCompare(b.next || '9999') || a.name.localeCompare(b.name, 'ko'));
+  $('prosList').innerHTML = list.length ? list.map(p => personItem('p', p,
+      esc([p.referrer && p.referrer + ' 소개', p.interest, p.next && '연락 ' + p.next].filter(Boolean).join(' · ') || p.phone || ''),
+      `<span class="tag">${p.created ? 'D+' + dayDiff(p.created, today()) : '가망'}</span>`)).join('')
+    : `<li class="empty">${db.prospects.length ? '검색 결과가 없습니다.' : '소개받은 분, 연락해 볼 지인을 적어 두세요. 오른쪽 위 ＋ 버튼'}</li>`;
+}
+function editProspect(id) {
+  const p = db.prospects.find(x => x.id === id) || {};
+  openSheet(id ? '가망고객 수정' : '가망고객 등록', formHtml(PROS_FIELDS, p) +
+    `<div class="row" style="margin-top:14px"><button class="btn grow" onclick="saveProspect('${id || ''}')">저장</button></div>`);
+}
+function saveProspect(id) {
+  const v = readForm(PROS_FIELDS);
+  if (!v.name) return alert('이름을 입력해 주세요.');
+  const p = db.prospects.find(x => x.id === id);
+  if (p) Object.assign(p, v);
+  else db.prospects.push({id: uid(), created: today(), logs: [], ...v});
+  save(); toast('저장했습니다.');
+  showProspect(p ? p.id : db.prospects[db.prospects.length - 1].id); refresh();
+}
+function showProspect(id) {
+  const p = db.prospects.find(x => x.id === id); if (!p) return;
+  openSheet(p.name + ' (가망고객)', `
+    ${contactRow(p.phone)}
+    <button class="btn" style="width:100%;margin-bottom:12px;background:var(--ok)" onclick="convertProspect('${p.id}')">✅ 정식 고객으로 전환</button>
+    ${infoCard([['연락처', p.phone], ['소개해 주신 분', p.referrer], ['관심 분야', p.interest], ['연락 예정일', p.next], ['등록일', p.created], ['메모', p.memo]])}
+    ${templateCard('p', p)}
+    ${logsHtml(p, 'p')}
+    <div class="row"><button class="btn sec grow" onclick="editProspect('${p.id}')">수정</button><button class="btn danger" onclick="removeItem('prospects','${p.id}')">삭제</button></div>`);
+}
+// 상담이 시작되면 개인 고객으로 옮기기 (상담 기록도 함께 옮김)
+function convertProspect(id) {
+  const p = db.prospects.find(x => x.id === id);
+  if (!p || !confirm(`${p.name}님을 정식 고객으로 옮길까요?\n고객 목록에 '관심' 단계로 등록되고, 적어 둔 상담 기록도 함께 옮겨집니다.`)) return;
+  const c = {
+    id: uid(), created: today(), name: p.name, phone: p.phone, stage: '관심', product: p.interest, next: p.next,
+    memo: [p.referrer && `소개: ${p.referrer}님`, p.memo].filter(Boolean).join('\n'), logs: p.logs || [],
+  };
+  db.customers.push(c);
+  db.prospects = db.prospects.filter(x => x.id !== id);
+  save(); toast('정식 고객으로 옮겼습니다.');
+  location.hash = 'customers'; showCustomer(c.id);
 }
 
 /* ───────── CEO(법인) 고객 ───────── */
@@ -507,14 +615,15 @@ const CEO_FIELDS = [
 ];
 function renderCeos() {
   const q = $('ceoSearch').value.trim().toLowerCase();
-  const list = db.ceos.filter(c => !q || [c.company, c.boss, c.industry, c.memo].join(' ').toLowerCase().includes(q))
-    .sort((a, b) => (a.next || '9999').localeCompare(b.next || '9999'));
+  setStarFilterBtn('ceoStarBtn', starOnly.ceo);
+  const list = db.ceos.filter(c => (!starOnly.ceo || c.star) && (!q || [c.company, c.boss, c.industry, c.memo].join(' ').toLowerCase().includes(q)))
+    .sort((a, b) => !!b.star - !!a.star || (a.next || '9999').localeCompare(b.next || '9999'));
   $('ceoList').innerHTML = list.length ? list.map(c => `
     <li class="item" onclick="showCeo('${c.id}')">
       <div class="avatar">🏢</div>
       <div class="body"><div class="name">${esc(c.company)} <span class="muted">${esc(c.boss || '')}</span></div>
-      <div class="meta">${esc([(c.issues || []).join(', '), c.next && '미팅 ' + c.next].filter(Boolean).join(' · '))}</div></div></li>`).join('')
-    : `<li class="empty">${db.ceos.length ? '검색 결과가 없습니다.' : '법인(CEO) 고객을 등록해 보세요.'}</li>`;
+      <div class="meta">${esc([(c.issues || []).join(', '), c.next && '미팅 ' + c.next].filter(Boolean).join(' · '))}</div></div>${starBtn('ceo', c)}</li>`).join('')
+    : `<li class="empty">${!db.ceos.length ? '법인(CEO) 고객을 등록해 보세요.' : starOnly.ceo ? '⭐ 관심고객이 없습니다.' : '검색 결과가 없습니다.'}</li>`;
 }
 function editCeo(id) {
   const c = db.ceos.find(x => x.id === id) || {};
@@ -533,14 +642,9 @@ function saveCeo(id) {
 function showCeo(id) {
   const c = db.ceos.find(x => x.id === id); if (!c) return;
   const info = [['대표자', c.boss], ['연락처', c.phone], ['업종', c.industry], ['직원 수', c.staff && c.staff + '명'],
-    ['관심 이슈', (c.issues || []).join(', ')], ['다음 미팅', c.next && `${c.next} ${c.nextTodo || ''}`], ['메모', c.memo]].filter(r => r[1]);
+    ['관심 이슈', (c.issues || []).join(', ')], ['다음 미팅', c.next && `${c.next} ${c.nextTodo || ''}`], ['메모', c.memo]];
   openSheet(c.company, `
-    ${c.phone ? `<div class="row" style="margin-bottom:12px"><a class="btn grow" href="${telHref(c.phone)}" style="text-align:center;text-decoration:none">📞 전화</a><a class="btn sec grow" href="${smsHref(c.phone)}" style="text-align:center;text-decoration:none">💬 문자</a></div>` : ''}
-    <div class="card">${info.map(([k, v]) => `<div style="margin-bottom:6px"><span class="muted">${k}</span><br>${esc(v).replace(/\n/g, '<br>')}</div>`).join('') || '<span class="muted">입력된 정보가 없습니다.</span>'}</div>
-    <div class="card"><h3>✨ 상담 문구 만들기</h3>
-      <div class="ai-buttons">${Object.keys(CEO_TEMPLATES).map(k => `<button class="btn sec" onclick="makeText('ceo','${c.id}','${k}')">${k}</button>`).join('')}</div>
-      <textarea id="aiOut" placeholder="위 버튼을 누르면 문구가 만들어집니다."></textarea>
-      <div class="row" style="margin-top:8px"><button class="btn grow" onclick="copyText($('aiOut').value)">복사하기</button></div></div>
+    ${contactRow(c.phone)}${starToggleBtn('ceo', c)}${infoCard(info)}${templateCard('ceo', c)}
     ${logsHtml(c, 'ceo')}
     <div class="row"><button class="btn sec grow" onclick="editCeo('${c.id}')">수정</button><button class="btn danger" onclick="removeItem('ceos','${c.id}')">삭제</button></div>`);
 }
@@ -642,8 +746,8 @@ function importData(input) {
   r.onload = () => {
     try {
       const d = JSON.parse(r.result);
-      if (!Array.isArray(d.customers) || !Array.isArray(d.ceos) || !Array.isArray(d.perf)) throw 0;
-      if (!confirm(`백업 파일을 불러올까요?\n고객 ${d.customers.length}명, CEO ${d.ceos.length}곳, 실적 ${d.perf.length}건\n※ 지금 기기의 데이터는 백업 내용으로 바뀝니다.`)) return;
+      if (!Array.isArray(d.customers) || !Array.isArray(d.ceos) || !Array.isArray(d.perf) || (d.prospects && !Array.isArray(d.prospects))) throw 0;
+      if (!confirm(`백업 파일을 불러올까요?\n고객 ${d.customers.length}명, 가망고객 ${(d.prospects || []).length}명, CEO ${d.ceos.length}곳, 실적 ${d.perf.length}건\n※ 지금 기기의 데이터는 백업 내용으로 바뀝니다.`)) return;
       const base = defaults();
       db = {...base, ...d, settings: {...base.settings, ...d.settings}};
       save(); closeSheet(); refresh(); toast('백업을 불러왔습니다.');
