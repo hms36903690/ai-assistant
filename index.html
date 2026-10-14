@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>현미숙 FC 영업비서</title>
+<meta name="description" content="현미숙 FC 개인용 보험 영업관리·상담 도우미">
+<meta name="theme-color" content="#102a43">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="현미숙 FC">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f5f7fa;--card:#fff;--ink:#102a43;--sub:#64748b;--line:#e2e8f0;
+  --brand:#102a43;--accent:#2563eb;--ok:#16a34a;--warn:#ea580c;--bad:#dc2626;--soft:#eef2f7;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+
+/* 레이아웃: 휴대폰 = 하단 탭 / PC = 왼쪽 메뉴 */
+.sidebar{display:none}
+.main{padding:0 16px calc(96px + env(safe-area-inset-bottom))}
+.top{position:sticky;top:0;z-index:5;background:rgba(245,247,250,.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;align-items:center;gap:8px;padding:12px 0;padding-top:calc(12px + env(safe-area-inset-top))}
+.top h1{font-size:19px;margin:0;flex:1}
+.icon-btn{border:1px solid var(--line);background:#fff;border-radius:10px;width:40px;height:40px;font-size:18px}
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:#fff;border-top:1px solid var(--line);box-shadow:0 -3px 15px rgba(0,0,0,.06);padding-bottom:env(safe-area-inset-bottom)}
+.bottom-nav button{flex:1;border:0;background:transparent;color:var(--sub);font-size:11px;padding:8px 2px 10px}
+.bottom-nav button span{display:block;font-size:21px;line-height:26px}
+.bottom-nav button.active{color:var(--ink);font-weight:800}
+@media(min-width:700px){
+  .bottom-nav{display:none}
+  .sidebar{display:block;position:fixed;top:0;bottom:0;left:0;width:210px;background:var(--brand);color:#fff;padding:22px 14px}
+  .sidebar .brand{font-weight:800;font-size:17px;margin:0 6px 20px}
+  .sidebar button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#cbd5e1;padding:11px 12px;border-radius:10px;margin-bottom:4px;font-size:15px}
+  .sidebar button.active,.sidebar button:hover{background:rgba(255,255,255,.12);color:#fff;font-weight:700}
+  .main{margin-left:210px;padding:0 28px 40px;max-width:1100px}
+  .stats{grid-template-columns:repeat(4,1fr)!important}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .formgrid{grid-template-columns:1fr 1fr!important}
+}
+
+.page{display:none}
+.page.active{display:block}
+.hero{background:linear-gradient(135deg,#102a43,#243b53);color:#fff;border-radius:18px;padding:20px 18px;margin-bottom:14px}
+.hero h2{margin:0 0 4px;font-size:21px}
+.hero p{margin:0;opacity:.85;font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px}
+.stat small{color:var(--sub);display:block;font-size:12px}
+.stat b{font-size:24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:15px;margin-bottom:12px}
+.card h3{margin:0 0 10px;font-size:16px}
+.muted{color:var(--sub);font-size:13px}
+.empty{color:var(--sub);text-align:center;padding:18px 0;font-size:14px}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.quick button{min-height:54px;border:1px solid var(--line);background:#fff;border-radius:12px;font-weight:700;font-size:14px}
+.notice{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:12px}
+
+.toolbar{position:sticky;top:calc(64px + env(safe-area-inset-top));z-index:4;background:var(--bg);display:flex;gap:8px;padding:4px 0 10px}
+.toolbar input,.toolbar select{min-width:0}
+input,select,textarea{width:100%;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 11px;font-size:16px}
+textarea{min-height:90px;resize:vertical}
+label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
+.formgrid{display:grid;grid-template-columns:1fr;gap:10px}
+.formgrid .full{grid-column:1/-1}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.checks label{display:flex;gap:6px;align-items:center;color:var(--ink);font-size:14px;background:var(--soft);border-radius:8px;padding:8px}
+.checks input{width:auto}
+
+.btn{border:0;border-radius:10px;padding:11px 14px;font-weight:700;background:var(--brand);color:#fff;min-height:44px}
+.btn.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:#fff;color:var(--bad);border:1px solid #fecaca}
+.btn.sm{min-height:34px;padding:6px 10px;font-size:13px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row .grow{flex:1}
+
+.list{list-style:none;margin:0;padding:0}
+.item{display:flex;align-items:center;gap:10px;padding:12px 2px;border-bottom:1px solid var(--line);cursor:pointer}
+.item:last-child{border-bottom:0}
+.item .avatar{width:40px;height:40px;border-radius:50%;background:var(--soft);display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+.item .body{flex:1;min-width:0}
+.item .name{font-weight:700}
+.item .meta{color:var(--sub);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;background:var(--soft);color:var(--ink);white-space:nowrap}
+.tag.overdue{background:#fee2e2;color:var(--bad)}
+.tag.today{background:#ffedd5;color:var(--warn)}
+.tag.bday{background:#fce7f3;color:#be185d}
+
+.progress{margin-bottom:12px}
+.progress .lbl{display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px}
+.bar{height:10px;background:var(--soft);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.bar i.done{background:var(--ok)}
+
+.ai-buttons{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
+.ai-buttons .btn{min-height:46px;font-size:14px}
+.log{border-left:3px solid var(--line);padding:2px 0 8px 10px;margin-bottom:6px;font-size:14px}
+.log b{font-size:12px;color:var(--sub);display:block}
+
+/* 아래에서 올라오는 창 */
+.sheet-bg{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:50;display:none;align-items:flex-end;justify-content:center}
+.sheet-bg.open{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+.sheet-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.sheet-head h2{flex:1;margin:0;font-size:18px}
+@media(min-width:700px){.sheet-bg{align-items:center}.sheet{border-radius:20px}}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#102a43;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="brand">현미숙 FC 영업비서</div>
+  <button data-page="home">🏠 홈</button>
+  <button data-page="customers">👥 고객</button>
+  <button data-page="ceo">🏢 CEO</button>
+  <button data-page="goals">🎯 목표</button>
+  <button data-page="perf">📊 실적</button>
+</nav>
+
+<main class="main">
+  <header class="top">
+    <h1 id="pageTitle">홈</h1>
+    <button class="icon-btn" onclick="openSettings()" aria-label="설정">⚙️</button>
+  </header>
+
+  <!-- 홈 -->
+  <section class="page" id="page-home">
+    <div class="hero"><h2 id="helloText"></h2><p id="todayText"></p></div>
+    <div id="backupNotice"></div>
+    <div class="stats" id="homeStats"></div>
+    <div class="quick">
+      <button onclick="editCustomer()">＋ 고객</button>
+      <button onclick="editCeo()">＋ CEO</button>
+      <button onclick="editPerf()">＋ 실적</button>
+    </div>
+    <div class="grid2">
+      <div class="card"><h3>오늘 할 일</h3><ul class="list" id="todoList"></ul></div>
+      <div class="card"><h3>이번 달 목표</h3><div id="homeGoals"></div></div>
+    </div>
+  </section>
+
+  <!-- 개인 고객 -->
+  <section class="page" id="page-customers">
+    <div class="toolbar">
+      <input id="custSearch" placeholder="이름·연락처·메모 검색" oninput="renderCustomers()">
+      <select id="custStage" onchange="renderCustomers()" style="max-width:120px"></select>
+      <button class="btn" onclick="editCustomer()">＋</button>
+    </div>
+    <div class="card"><ul class="list" id="custList"></ul></div>
+  </section>
+
+  <!-- CEO(법인) 고객 -->
+  <section class="page" id="page-ceo">
+    <div class="toolbar">
+      <input id="ceoSearch" placeholder="회사명·대표자 검색" oninput="renderCeos()">
+      <button class="btn" onclick="editCeo()">＋</button>
+    </div>
+    <div class="card"><ul class="list" id="ceoList"></ul></div>
+  </section>
+
+  <!-- 목표 -->
+  <section class="page" id="page-goals">
+    <div class="toolbar"><input type="month" id="goalMonth" onchange="renderGoals()"></div>
+    <div class="grid2">
+      <div class="card"><h3>진행 현황</h3><div id="goalProgress"></div></div>
+      <div class="card">
+        <h3>목표 설정</h3>
+        <div class="formgrid" id="goalForm"></div>
+        <div class="row" style="margin-top:12px"><button class="btn grow" onclick="saveGoals()">목표 저장</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 실적 -->
+  <section class="page" id="page-perf">
+    <div class="toolbar">
+      <input type="month" id="perfMonth" onchange="renderPerf()">
+      <button class="btn" onclick="editPerf()">＋</button>
+    </div>
+    <div class="stats" id="perfStats"></div>
+    <div class="card"><h3>계약 목록</h3><ul class="list" id="perfList"></ul></div>
+  </section>
+</main>
+
+<nav class="bottom-nav" id="bottomNav">
+  <button data-page="home"><span>🏠</span>홈</button>
+  <button data-page="customers"><span>👥</span>고객</button>
+  <button data-page="ceo"><span>🏢</span>CEO</button>
+  <button data-page="goals"><span>🎯</span>목표</button>
+  <button data-page="perf"><span>📊</span>실적</button>
+</nav>
+
+<div class="sheet-bg" id="sheetBg" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-head"><h2 id="sheetTitle"></h2><button class="icon-btn" onclick="closeSheet()" aria-label="닫기">✕</button></div>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<input type="file" id="importFile" accept=".json,application/json" hidden onchange="importData(this)">
+
+<script>
+/* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
+const KEY = 'hmsfc_app_v2';
+const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
+const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
+const PAGES = {home: '홈', customers: '고객', ceo: 'CEO 고객', goals: '목표', perf: '실적'};
+
+function defaults() {
+  return {settings: {fcName: '현미숙 FC', lastBackup: ''}, customers: [], ceos: [], goals: {}, perf: []};
+}
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(KEY));
+    if (d) { const base = defaults(); return {...base, ...d, settings: {...base.settings, ...d.settings}}; }
+  } catch (e) {}
+  return defaults();
+}
+let db = load();
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(db)); }
+  catch (e) { alert('저장에 실패했습니다. 저장 공간을 확인하고 백업 파일을 내보내 주세요.'); }
+}
+
+/* ───────── 작은 도우미 함수 ───────── */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const today = () => ymd(new Date());
+const thisMonth = () => today().slice(0, 7);
+const won = n => (Number(n) || 0).toLocaleString('ko-KR') + '원';
+const dayDiff = (a, b) => Math.round((new Date(b + 'T00:00') - new Date(a + 'T00:00')) / 86400000);
+
+function age(birth) {
+  if (!birth) return '';
+  const b = new Date(birth + 'T00:00'), t = new Date();
+  let a = t.getFullYear() - b.getFullYear();
+  if (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--;
+  return a >= 0 ? a + '세' : '';
+}
+// 다가오는 생일까지 남은 날 (없으면 null)
+function daysToBirthday(birth) {
+  if (!birth) return null;
+  const t = today(), y = Number(t.slice(0, 4));
+  let next = y + birth.slice(4);
+  if (next < t) next = (y + 1) + birth.slice(4);
+  return dayDiff(t, next);
+}
+function toast(msg) {
+  const el = $('toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1800);
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove();
+  }
+  toast('복사했습니다. 문자·카톡에 붙여넣으세요.');
+}
+const telHref = p => 'tel:' + String(p || '').replace(/[^0-9+]/g, '');
+const smsHref = p => 'sms:' + String(p || '').replace(/[^0-9+]/g, '');
+
+/* ───────── 화면 전환 (주소 끝 #이름 으로 기억 → 뒤로가기 동작) ───────── */
+function showPage(id) {
+  if (!PAGES[id]) id = 'home';
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + id));
+  document.querySelectorAll('[data-page]').forEach(b => b.classList.toggle('active', b.dataset.page === id));
+  $('pageTitle').textContent = PAGES[id];
+  render(id);
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('[data-page]').forEach(b => b.addEventListener('click', () => {
+  if (location.hash === '#' + b.dataset.page) showPage(b.dataset.page);
+  else location.hash = b.dataset.page;
+}));
+window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
+
+function render(id) {
+  ({home: renderHome, customers: renderCustomers, ceo: renderCeos, goals: renderGoals, perf: renderPerf})[id]();
+}
+function refresh() { render(location.hash.slice(1) in PAGES ? location.hash.slice(1) : 'home'); }
+
+/* ───────── 아래에서 올라오는 창 ───────── */
+function openSheet(title, html) {
+  $('sheetTitle').textContent = title; $('sheetBody').innerHTML = html;
+  $('sheetBg').classList.add('open'); document.body.style.overflow = 'hidden';
+}
+function closeSheet() { $('sheetBg').classList.remove('open'); document.body.style.overflow = ''; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+// 입력 칸 목록으로 폼 HTML 만들기
+function formHtml(fields, data) {
+  return '<div class="formgrid">' + fields.map(f => {
+    const v = esc(data[f.k] ?? f.def ?? '');
+    let input;
+    if (f.type === 'select') input = `<select id="f_${f.k}">${f.options.map(o => `<option${o === (data[f.k] ?? f.def) ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+    else if (f.type === 'textarea') input = `<textarea id="f_${f.k}" placeholder="${esc(f.ph || '')}">${v}</textarea>`;
+    else if (f.type === 'checks') input = `<div class="checks">${f.options.map(o => `<label><input type="checkbox" name="f_${f.k}" value="${esc(o)}"${(data[f.k] || []).includes(o) ? ' checked' : ''}>${esc(o)}</label>`).join('')}</div>`;
+    else input = `<input id="f_${f.k}" type="${f.type || 'text'}" value="${v}" placeholder="${esc(f.ph || '')}"${f.type === 'number' ? ' inputmode="numeric"' : ''}>`;
+    return `<div class="${f.full ? 'full' : ''}"><label>${esc(f.label)}</label>${input}</div>`;
+  }).join('') + '</div>';
+}
+function readForm(fields) {
+  const o = {};
+  fields.forEach(f => {
+    if (f.type === 'checks') o[f.k] = [...document.querySelectorAll(`[name="f_${f.k}"]:checked`)].map(x => x.value);
+    else o[f.k] = $('f_' + f.k).value.trim();
+  });
+  return o;
+}
+
+/* ───────── 홈 ───────── */
+function todoItems() {
+  const t = today(), items = [];
+  const add = (p, kind) => {
+    if (p.next && p.next <= t) items.push({p, kind, tag: p.next < t ? `<span class="tag overdue">${dayDiff(p.next, t)}일 지남</span>` : '<span class="tag today">오늘 연락</span>', sort: p.next});
+  };
+  db.customers.forEach(c => add(c, 'c'));
+  db.ceos.forEach(c => add(c, 'ceo'));
+  db.customers.forEach(c => {
+    const d = daysToBirthday(c.birth);
+    if (d !== null && d <= 7) items.push({p: c, kind: 'c', tag: `<span class="tag bday">🎂 ${d === 0 ? '오늘 생일' : d + '일 후 생일'}</span>`, sort: 'b' + pad(d)});
+  });
+  return items.sort((a, b) => a.sort.localeCompare(b.sort));
+}
+function monthStats(m) {
+  const inM = d => (d || '').startsWith(m);
+  const people = [...db.customers, ...db.ceos];
+  const perf = db.perf.filter(p => inM(p.date));
+  return {
+    newCust: people.filter(p => inM(p.created)).length,
+    consult: people.reduce((n, p) => n + (p.logs || []).filter(l => inM(l.date)).length, 0),
+    contract: perf.length,
+    premium: perf.reduce((n, p) => n + (Number(p.premium) || 0), 0),
+  };
+}
+function renderHome() {
+  const now = new Date();
+  $('helloText').textContent = `안녕하세요, ${db.settings.fcName}님`;
+  $('todayText').textContent = now.toLocaleDateString('ko-KR', {year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
+
+  const lb = db.settings.lastBackup, total = db.customers.length + db.ceos.length;
+  $('backupNotice').innerHTML = total && (!lb || dayDiff(lb, today()) >= 14)
+    ? `<div class="notice">💾 ${lb ? `마지막 백업이 ${dayDiff(lb, today())}일 전입니다.` : '아직 백업한 적이 없습니다.'} <a href="#" onclick="exportData();return false">지금 백업하기</a></div>` : '';
+
+  const s = monthStats(thisMonth()), todo = todoItems();
+  $('homeStats').innerHTML = [
+    ['전체 고객', total + '명'], ['연락할 고객', todo.length + '건'],
+    ['이번 달 상담', s.consult + '건'], ['이번 달 계약', s.contract + '건'],
+  ].map(([k, v]) => `<div class="stat"><small>${k}</small><b>${v}</b></div>`).join('');
+
+  $('todoList').innerHTML = todo.length ? todo.map(({p, kind, tag}) => `
+    <li class="item" onclick="${kind === 'c' ? 'showCustomer' : 'showCeo'}('${p.id}')">
+      <div class="avatar">${kind === 'c' ? esc(p.name.slice(0, 1)) : '🏢'}</div>
+      <div class="body"><div class="name">${esc(kind === 'c' ? p.name : p.company)}</div>
+      <div class="meta">${esc(p.nextTodo || p.memo || '')}</div></div>${tag}</li>`).join('')
+    : '<li class="empty">오늘 연락할 고객이 없습니다 👍</li>';
+
+  $('homeGoals').innerHTML = goalBars(thisMonth());
+}
+
+/* ───────── 개인 고객 ───────── */
+const CUST_FIELDS = [
+  {k: 'name', label: '이름 *'},
+  {k: 'phone', label: '연락처', type: 'tel', ph: '010-0000-0000'},
+  {k: 'birth', label: '생년월일', type: 'date'},
+  {k: 'stage', label: '진행 단계', type: 'select', options: STAGES, def: '관심'},
+  {k: 'product', label: '관심 상품', ph: '예: 실손, 암보험, 연금'},
+  {k: 'family', label: '가족 사항', ph: '예: 배우자, 자녀 2명'},
+  {k: 'next', label: '다음 연락일', type: 'date'},
+  {k: 'nextTodo', label: '다음에 할 일', ph: '예: 보장분석 결과 설명'},
+  {k: 'memo', label: '메모', type: 'textarea', full: true},
+];
+function renderCustomers() {
+  const sel = $('custStage');
+  if (!sel.options.length) sel.innerHTML = '<option value="">전체 단계</option>' + STAGES.map(s => `<option>${s}</option>`).join('');
+  const q = $('custSearch').value.trim().toLowerCase(), st = sel.value;
+  const list = db.customers
+    .filter(c => (!st || c.stage === st) && (!q || [c.name, c.phone, c.memo, c.product].join(' ').toLowerCase().includes(q)))
+    .sort((a, b) => (a.next || '9999').localeCompare(b.next || '9999') || a.name.localeCompare(b.name, 'ko'));
+  $('custList').innerHTML = list.length ? list.map(c => `
+    <li class="item" onclick="showCustomer('${c.id}')">
+      <div class="avatar">${esc(c.name.slice(0, 1))}</div>
+      <div class="body"><div class="name">${esc(c.name)} <span class="muted">${age(c.birth)}</span></div>
+      <div class="meta">${esc([c.product, c.next && '다음 연락 ' + c.next].filter(Boolean).join(' · ') || c.phone || '')}</div></div>
+      <span class="tag">${esc(c.stage)}</span></li>`).join('')
+    : `<li class="empty">${db.customers.length ? '검색 결과가 없습니다.' : '첫 고객을 등록해 보세요. 오른쪽 위 ＋ 버튼'}</li>`;
+}
+function editCustomer(id) {
+  const c = db.customers.find(x => x.id === id) || {};
+  openSheet(id ? '고객 수정' : '고객 등록', formHtml(CUST_FIELDS, c) +
+    `<div class="row" style="margin-top:14px"><button class="btn grow" onclick="saveCustomer('${id || ''}')">저장</button></div>`);
+}
+function saveCustomer(id) {
+  const v = readForm(CUST_FIELDS);
+  if (!v.name) return alert('이름을 입력해 주세요.');
+  const c = db.customers.find(x => x.id === id);
+  if (c) Object.assign(c, v);
+  else db.customers.push({id: uid(), created: today(), logs: [], ...v});
+  save(); toast('저장했습니다.');
+  showCustomer(c ? c.id : db.customers[db.customers.length - 1].id); refresh();
+}
+function showCustomer(id) {
+  const c = db.customers.find(x => x.id === id); if (!c) return;
+  const info = [['연락처', c.phone], ['생년월일', c.birth && `${c.birth} (${age(c.birth)})`], ['진행 단계', c.stage], ['관심 상품', c.product],
+    ['가족', c.family], ['다음 연락', c.next && `${c.next} ${c.nextTodo || ''}`], ['메모', c.memo]].filter(r => r[1]);
+  openSheet(c.name + ' 고객', `
+    ${c.phone ? `<div class="row" style="margin-bottom:12px"><a class="btn grow" href="${telHref(c.phone)}" style="text-align:center;text-decoration:none">📞 전화</a><a class="btn sec grow" href="${smsHref(c.phone)}" style="text-align:center;text-decoration:none">💬 문자</a></div>` : ''}
+    <div class="card">${info.map(([k, v]) => `<div style="margin-bottom:6px"><span class="muted">${k}</span><br>${esc(v).replace(/\n/g, '<br>')}</div>`).join('') || '<span class="muted">입력된 정보가 없습니다.</span>'}</div>
+    <div class="card"><h3>✨ 상담 문구 만들기</h3>
+      <div class="ai-buttons">${Object.keys(CUST_TEMPLATES).map(k => `<button class="btn sec" onclick="makeText('c','${c.id}','${k}')">${k}</button>`).join('')}</div>
+      <textarea id="aiOut" placeholder="위 버튼을 누르면 문구가 만들어집니다. 자유롭게 고쳐서 쓰세요."></textarea>
+      <div class="row" style="margin-top:8px"><button class="btn grow" onclick="copyText($('aiOut').value)">복사하기</button></div></div>
+    ${logsHtml(c, 'c')}
+    <div class="row"><button class="btn sec grow" onclick="editCustomer('${c.id}')">수정</button><button class="btn danger" onclick="removeItem('customers','${c.id}')">삭제</button></div>`);
+}
+
+/* ───────── 상담 기록 (개인·CEO 공통) ───────── */
+function logsHtml(p, kind) {
+  const logs = [...(p.logs || [])].sort((a, b) => b.date.localeCompare(a.date));
+  return `<div class="card"><h3>📝 상담 기록</h3>
+    <div class="formgrid" style="margin-bottom:8px">
+      <div><label>날짜</label><input type="date" id="logDate" value="${today()}"></div>
+      <div><label>다음 연락일 (선택)</label><input type="date" id="logNext"></div>
+      <div class="full"><label>내용</label><textarea id="logNote" placeholder="오늘 상담한 내용, 고객 반응, 다음 할 일"></textarea></div>
+    </div>
+    <button class="btn sec" onclick="addLog('${kind}','${p.id}')">기록 추가</button>
+    <div style="margin-top:12px">${logs.map(l => `<div class="log"><b>${esc(l.date)} <a href="#" onclick="delLog('${kind}','${p.id}','${l.id}');return false" style="color:var(--sub)">삭제</a></b>${esc(l.note).replace(/\n/g, '<br>')}</div>`).join('') || '<div class="muted">아직 기록이 없습니다.</div>'}</div></div>`;
+}
+const findPerson = (kind, id) => (kind === 'c' ? db.customers : db.ceos).find(x => x.id === id);
+function addLog(kind, id) {
+  const p = findPerson(kind, id), note = $('logNote').value.trim(), next = $('logNext').value;
+  if (!note) return alert('상담 내용을 입력해 주세요.');
+  (p.logs = p.logs || []).push({id: uid(), date: $('logDate').value || today(), note});
+  if (next) p.next = next;
+  save(); toast('상담 기록을 추가했습니다.');
+  (kind === 'c' ? showCustomer : showCeo)(id); refresh();
+}
+function delLog(kind, id, logId) {
+  if (!confirm('이 상담 기록을 삭제할까요?')) return;
+  const p = findPerson(kind, id); p.logs = p.logs.filter(l => l.id !== logId);
+  save(); (kind === 'c' ? showCustomer : showCeo)(id); refresh();
+}
+function removeItem(coll, id) {
+  if (!confirm('정말 삭제할까요? 되돌릴 수 없습니다.')) return;
+  db[coll] = db[coll].filter(x => x.id !== id);
+  save(); closeSheet(); refresh(); toast('삭제했습니다.');
+}
+
+/* ───────── 상담 문구 틀 (템플릿) ─────────
+   고객 정보를 빈칸에 채워 넣는 방식입니다. 외부로 정보가 나가지 않습니다. */
+const CUST_TEMPLATES = {
+  '안부 인사': c => `${c.name}님, 안녕하세요. ${db.settings.fcName}입니다.\n요즘 건강은 어떠신지요? 환절기 건강 잘 챙기시고, 보험 관련해서 궁금하신 점 있으시면 언제든 편하게 연락 주세요. 늘 응원하겠습니다 😊`,
+  '생일 축하': c => `${c.name}님, 생일 진심으로 축하드립니다! 🎂\n늘 건강하시고 행복한 일만 가득한 한 해 되시길 바랍니다.\n- ${db.settings.fcName} 드림`,
+  '상담 약속': c => `${c.name}님, 안녕하세요. ${db.settings.fcName}입니다.\n${c.product ? `지난번 말씀하신 ${c.product} 관련해서` : '보장 내용 관련해서'} 정리한 자료를 설명드리고 싶습니다.\n이번 주 편하신 날짜와 시간 알려주시면 맞춰서 찾아뵙겠습니다.`,
+  '보장 점검 제안': c => `${c.name}님, 안녕하세요. ${db.settings.fcName}입니다.\n가입하신 보험이 지금 상황에 잘 맞는지 무료로 한 번에 점검해 드리고 있습니다.\n중복되거나 부족한 보장이 있는지 확인해 보시면 좋을 것 같아요. 10~20분이면 충분하니 편하실 때 말씀 주세요.`,
+  '계약 감사': c => `${c.name}님, 믿고 맡겨 주셔서 진심으로 감사드립니다.\n${c.product ? c.product + ' ' : ''}계약 관련해서 궁금하신 점이나 보험금 청구가 필요하실 때 언제든 연락 주세요. 끝까지 책임지고 관리해 드리겠습니다.\n- ${db.settings.fcName}`,
+  '상담 준비 메모': c => {
+    const last = [...(c.logs || [])].sort((a, b) => b.date.localeCompare(a.date))[0];
+    return `[상담 준비 메모] ${c.name} ${age(c.birth)}\n· 진행 단계: ${c.stage || '-'}\n· 관심 상품: ${c.product || '-'}\n· 가족: ${c.family || '-'}\n· 최근 상담: ${last ? last.date + ' - ' + last.note : '없음'}\n· 이번에 할 일: ${c.nextTodo || '-'}\n· 확인할 것: 기존 가입 보험, 월 납입 가능 금액, 가장 걱정하는 위험`;
+  },
+};
+const CEO_TEMPLATES = {
+  '미팅 요청': c => `${c.boss || ''} 대표님, 안녕하세요. ${db.settings.fcName}입니다.\n${c.company} 경영에 도움이 될 만한 ${(c.issues || []).slice(0, 2).join('·') || '법인 리스크 관리'} 관련 자료를 준비했습니다.\n30분 정도 시간 내주시면 핵심만 간단히 말씀드리겠습니다. 편하신 일정 알려주세요.`,
+  '이슈별 제안 메모': c => {
+    const tips = {
+      '가업승계': '승계 시점·지분 이전 계획과 상속세 재원 마련 방안 점검',
+      '퇴직금 재원': '대표·임원 퇴직금 규정 정비 여부와 재원 마련 방법 점검',
+      '법인세 절감': '세무 전문가와 함께 비용 처리 가능 항목 검토 (최종 판단은 세무사)',
+      '대표 보장': '대표 유고 시 회사 운영자금·대출 상환 대비 보장 점검',
+      '임원 보장': '핵심 임원 유고 대비 보장과 유지 방안 점검',
+      '직원 복리후생': '단체보험 등 직원 복리후생 제도 점검',
+      '가지급금 정리': '가지급금 규모 파악과 정리 방안 검토 (세무사 협업)',
+      '주식 가치평가': '비상장주식 가치평가 필요성과 시점 검토 (전문가 협업)',
+    };
+    const list = (c.issues || []).map(i => `· ${i}: ${tips[i]}`).join('\n');
+    return `[${c.company} 제안 준비 메모]\n대표: ${c.boss || '-'} / 업종: ${c.industry || '-'} / 직원 수: ${c.staff || '-'}\n\n관심 이슈별 확인 사항\n${list || '· 관심 이슈를 체크하면 여기에 표시됩니다.'}\n\n※ 세무·법률 판단은 반드시 전문가 확인 후 안내`;
+  },
+  '미팅 후 감사': c => `${c.boss || ''} 대표님, 오늘 귀한 시간 내주셔서 감사합니다.\n말씀 나눈 내용은 정리해서 다시 안내드리겠습니다. 추가로 궁금하신 점 있으시면 언제든 연락 주세요.\n- ${db.settings.fcName}`,
+};
+function makeText(kind, id, key) {
+  const p = findPerson(kind, id);
+  $('aiOut').value = (kind === 'c' ? CUST_TEMPLATES : CEO_TEMPLATES)[key](p);
+}
+
+/* ───────── CEO(법인) 고객 ───────── */
+const CEO_FIELDS = [
+  {k: 'company', label: '회사명 *'},
+  {k: 'boss', label: '대표자'},
+  {k: 'phone', label: '연락처', type: 'tel'},
+  {k: 'industry', label: '업종', ph: '예: 제조업'},
+  {k: 'staff', label: '직원 수', type: 'number'},
+  {k: 'next', label: '다음 미팅일', type: 'date'},
+  {k: 'nextTodo', label: '다음에 할 일'},
+  {k: 'issues', label: '관심 이슈', type: 'checks', options: CEO_ISSUES, full: true},
+  {k: 'memo', label: '메모', type: 'textarea', full: true},
+];
+function renderCeos() {
+  const q = $('ceoSearch').value.trim().toLowerCase();
+  const list = db.ceos.filter(c => !q || [c.company, c.boss, c.industry, c.memo].join(' ').toLowerCase().includes(q))
+    .sort((a, b) => (a.next || '9999').localeCompare(b.next || '9999'));
+  $('ceoList').innerHTML = list.length ? list.map(c => `
+    <li class="item" onclick="showCeo('${c.id}')">
+      <div class="avatar">🏢</div>
+      <div class="body"><div class="name">${esc(c.company)} <span class="muted">${esc(c.boss || '')}</span></div>
+      <div class="meta">${esc([(c.issues || []).join(', '), c.next && '미팅 ' + c.next].filter(Boolean).join(' · '))}</div></div></li>`).join('')
+    : `<li class="empty">${db.ceos.length ? '검색 결과가 없습니다.' : '법인(CEO) 고객을 등록해 보세요.'}</li>`;
+}
+function editCeo(id) {
+  const c = db.ceos.find(x => x.id === id) || {};
+  openSheet(id ? 'CEO 고객 수정' : 'CEO 고객 등록', formHtml(CEO_FIELDS, c) +
+    `<div class="row" style="margin-top:14px"><button class="btn grow" onclick="saveCeo('${id || ''}')">저장</button></div>`);
+}
+function saveCeo(id) {
+  const v = readForm(CEO_FIELDS);
+  if (!v.company) return alert('회사명을 입력해 주세요.');
+  const c = db.ceos.find(x => x.id === id);
+  if (c) Object.assign(c, v);
+  else db.ceos.push({id: uid(), created: today(), logs: [], ...v});
+  save(); toast('저장했습니다.');
+  showCeo(c ? c.id : db.ceos[db.ceos.length - 1].id); refresh();
+}
+function showCeo(id) {
+  const c = db.ceos.find(x => x.id === id); if (!c) return;
+  const info = [['대표자', c.boss], ['연락처', c.phone], ['업종', c.industry], ['직원 수', c.staff && c.staff + '명'],
+    ['관심 이슈', (c.issues || []).join(', ')], ['다음 미팅', c.next && `${c.next} ${c.nextTodo || ''}`], ['메모', c.memo]].filter(r => r[1]);
+  openSheet(c.company, `
+    ${c.phone ? `<div class="row" style="margin-bottom:12px"><a class="btn grow" href="${telHref(c.phone)}" style="text-align:center;text-decoration:none">📞 전화</a><a class="btn sec grow" href="${smsHref(c.phone)}" style="text-align:center;text-decoration:none">💬 문자</a></div>` : ''}
+    <div class="card">${info.map(([k, v]) => `<div style="margin-bottom:6px"><span class="muted">${k}</span><br>${esc(v).replace(/\n/g, '<br>')}</div>`).join('') || '<span class="muted">입력된 정보가 없습니다.</span>'}</div>
+    <div class="card"><h3>✨ 상담 문구 만들기</h3>
+      <div class="ai-buttons">${Object.keys(CEO_TEMPLATES).map(k => `<button class="btn sec" onclick="makeText('ceo','${c.id}','${k}')">${k}</button>`).join('')}</div>
+      <textarea id="aiOut" placeholder="위 버튼을 누르면 문구가 만들어집니다."></textarea>
+      <div class="row" style="margin-top:8px"><button class="btn grow" onclick="copyText($('aiOut').value)">복사하기</button></div></div>
+    ${logsHtml(c, 'ceo')}
+    <div class="row"><button class="btn sec grow" onclick="editCeo('${c.id}')">수정</button><button class="btn danger" onclick="removeItem('ceos','${c.id}')">삭제</button></div>`);
+}
+
+/* ───────── 목표 ───────── */
+const GOAL_FIELDS = [
+  {k: 'newCust', label: '신규 고객 (명)', type: 'number'},
+  {k: 'consult', label: '상담 (건)', type: 'number'},
+  {k: 'contract', label: '계약 (건)', type: 'number'},
+  {k: 'premium', label: '월 보험료 합계 (원)', type: 'number'},
+];
+function goalBars(m, onGoalsPage) {
+  const g = db.goals[m] || {}, s = monthStats(m);
+  const rows = GOAL_FIELDS.filter(f => Number(g[f.k]) > 0);
+  if (!rows.length) return `<div class="empty">아직 목표가 없습니다.${onGoalsPage ? ' 오른쪽(아래)에서 설정하세요.' : ' <a href="#goals">목표 설정하기</a>'}</div>`;
+  return rows.map(f => {
+    const goal = Number(g[f.k]), cur = s[f.k], pct = Math.min(100, Math.round(cur / goal * 100));
+    const fmt = f.k === 'premium' ? won : n => n;
+    return `<div class="progress"><div class="lbl"><span>${f.label.replace(/ \(.*\)/, '')}</span><span><b>${fmt(cur)}</b> / ${fmt(goal)} (${pct}%)</span></div>
+      <div class="bar"><i class="${pct >= 100 ? 'done' : ''}" style="width:${pct}%"></i></div></div>`;
+  }).join('');
+}
+function renderGoals() {
+  if (!$('goalMonth').value) $('goalMonth').value = thisMonth();
+  const m = $('goalMonth').value;
+  $('goalProgress').innerHTML = goalBars(m, true) + '<p class="muted" style="margin:0">실적은 고객 등록일, 상담 기록, 실적 입력에서 자동으로 계산됩니다.</p>';
+  $('goalForm').innerHTML = formHtml(GOAL_FIELDS, db.goals[m] || {}).replace(/^<div class="formgrid">|<\/div>$/g, '');
+}
+function saveGoals() {
+  const m = $('goalMonth').value || thisMonth();
+  db.goals[m] = readForm(GOAL_FIELDS);
+  save(); renderGoals(); toast('목표를 저장했습니다.');
+}
+
+/* ───────── 실적 ───────── */
+const PERF_FIELDS = [
+  {k: 'date', label: '계약일 *', type: 'date'},
+  {k: 'name', label: '고객명 *'},
+  {k: 'product', label: '상품명'},
+  {k: 'premium', label: '월 보험료 (원)', type: 'number'},
+  {k: 'type', label: '구분', type: 'select', options: ['신계약', '추가계약', '법인계약'], def: '신계약'},
+  {k: 'memo', label: '메모', full: true},
+];
+function renderPerf() {
+  if (!$('perfMonth').value) $('perfMonth').value = thisMonth();
+  const m = $('perfMonth').value, s = monthStats(m);
+  const list = db.perf.filter(p => (p.date || '').startsWith(m)).sort((a, b) => b.date.localeCompare(a.date));
+  $('perfStats').innerHTML = [['계약 건수', s.contract + '건'], ['월 보험료 합계', won(s.premium)]]
+    .map(([k, v]) => `<div class="stat"><small>${k}</small><b style="font-size:20px">${v}</b></div>`).join('');
+  $('perfList').innerHTML = list.length ? list.map(p => `
+    <li class="item" onclick="editPerf('${p.id}')">
+      <div class="body"><div class="name">${esc(p.name)} <span class="muted">${esc(p.product || '')}</span></div>
+      <div class="meta">${esc(p.date)} · ${esc(p.type)}</div></div><b>${won(p.premium)}</b></li>`).join('')
+    : '<li class="empty">이 달의 실적이 없습니다.</li>';
+}
+function editPerf(id) {
+  const p = db.perf.find(x => x.id === id) || {date: today()};
+  openSheet(id ? '실적 수정' : '실적 입력', formHtml(PERF_FIELDS, p) + `<div class="row" style="margin-top:14px">
+    <button class="btn grow" onclick="savePerf('${id || ''}')">저장</button>
+    ${id ? `<button class="btn danger" onclick="removeItem('perf','${id}')">삭제</button>` : ''}</div>`);
+}
+function savePerf(id) {
+  const v = readForm(PERF_FIELDS);
+  if (!v.date || !v.name) return alert('계약일과 고객명을 입력해 주세요.');
+  v.premium = Number(v.premium) || 0;
+  const p = db.perf.find(x => x.id === id);
+  if (p) Object.assign(p, v); else db.perf.push({id: uid(), ...v});
+  save(); closeSheet(); refresh(); toast('실적을 저장했습니다.');
+}
+
+/* ───────── 설정 · 백업 ───────── */
+function openSettings() {
+  openSheet('설정', `
+    <div class="card"><h3>내 이름</h3>
+      <div class="row"><input id="setName" class="grow" value="${esc(db.settings.fcName)}" style="flex:1"><button class="btn" onclick="db.settings.fcName=$('setName').value.trim()||'현미숙 FC';save();refresh();toast('저장했습니다.')">저장</button></div>
+      <p class="muted">상담 문구의 서명에 사용됩니다.</p></div>
+    <div class="card"><h3>💾 백업</h3>
+      <p class="muted" style="margin-top:0">데이터는 이 기기의 이 브라우저 안에만 저장됩니다. 브라우저 기록을 지우거나 기기를 바꾸면 사라지니, 정기적으로 백업 파일을 내보내 안전한 곳에 보관하세요. 다른 기기로 옮길 때도 이 파일을 불러오면 됩니다.</p>
+      <p class="muted">마지막 백업: ${db.settings.lastBackup || '없음'}</p>
+      <div class="row"><button class="btn grow" onclick="exportData()">백업 파일 내보내기</button><button class="btn sec grow" onclick="$('importFile').click()">백업 불러오기</button></div></div>
+    <div class="card"><h3>🔒 개인정보 안내</h3>
+      <p class="muted" style="margin:0">고객 정보는 서버로 전송되지 않습니다. 다만 휴대폰 분실에 대비해 화면 잠금을 꼭 사용하시고, 백업 파일은 카톡·메일 등으로 공유하지 마세요. 실제 업무 사용 전 회사의 개인정보·보안 규정을 확인하세요.</p></div>
+    <div class="card"><h3>초기화</h3><button class="btn danger" onclick="resetAll()">모든 데이터 삭제</button></div>`);
+}
+function exportData() {
+  db.settings.lastBackup = today(); save();
+  const blob = new Blob([JSON.stringify(db, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `영업비서_백업_${today()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('백업 파일을 내보냈습니다.'); refresh();
+  if ($('sheetBg').classList.contains('open') && $('sheetTitle').textContent === '설정') openSettings();
+}
+function importData(input) {
+  const file = input.files[0]; input.value = '';
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if (!Array.isArray(d.customers) || !Array.isArray(d.ceos) || !Array.isArray(d.perf)) throw 0;
+      if (!confirm(`백업 파일을 불러올까요?\n고객 ${d.customers.length}명, CEO ${d.ceos.length}곳, 실적 ${d.perf.length}건\n※ 지금 기기의 데이터는 백업 내용으로 바뀝니다.`)) return;
+      const base = defaults();
+      db = {...base, ...d, settings: {...base.settings, ...d.settings}};
+      save(); closeSheet(); refresh(); toast('백업을 불러왔습니다.');
+    } catch (e) { alert('올바른 백업 파일이 아닙니다.'); }
+  };
+  r.readAsText(file);
+}
+function resetAll() {
+  if (!confirm('모든 고객·실적·목표 데이터를 삭제합니다. 계속할까요?')) return;
+  if (!confirm('정말 삭제할까요? 백업 파일이 없으면 되돌릴 수 없습니다.')) return;
+  db = defaults(); save(); closeSheet(); refresh(); toast('초기화했습니다.');
+}
+
+/* ───────── 시작 ───────── */
+showPage(location.hash.slice(1) || 'home');
+
+// 앱 설치·오프라인 지원 (https 주소에서만 동작, 파일을 직접 열면 건너뜀)
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
