@@ -90,6 +90,10 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 .tag.overdue{background:#fee2e2;color:var(--bad)}
 .tag.today{background:#ffedd5;color:var(--warn)}
 .tag.bday{background:#fce7f3;color:#be185d}
+.task{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line)}
+.task input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--ok)}
+.task .txt{flex:1;min-width:0;word-break:break-all}
+.task.done .txt{text-decoration:line-through;color:var(--sub)}
 .tag.done{background:#dcfce7;color:var(--ok)}
 .tag.s-new{background:#dbeafe;color:#1d4ed8}
 .tag.s-miss{background:#ffedd5;color:var(--warn)}
@@ -168,7 +172,13 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
       <button onclick="editPerf()">＋ 실적</button>
     </div>
     <div class="grid2">
-      <div class="card"><h3>오늘 할 일</h3><ul class="list" id="todoList"></ul></div>
+      <div class="card"><h3>오늘 할 일</h3>
+        <div class="row" style="margin-bottom:6px">
+          <input id="taskInput" class="grow" style="flex:1;min-width:0" placeholder="할 일 적기" onkeydown="if(event.key==='Enter'&&!event.isComposing)addTask()">
+          <button class="btn" onclick="addTask()" aria-label="할 일 추가">＋</button></div>
+        <div class="row" style="margin-bottom:4px"><label style="margin:0">날짜</label><input type="date" id="taskDate" style="width:auto;padding:6px 8px;font-size:14px"><span class="muted grow" id="taskLater"></span></div>
+        <ul class="list" id="taskList"></ul>
+        <ul class="list" id="todoList"></ul></div>
       <div class="card"><h3>이번 달 목표</h3><div id="homeGoals"></div></div>
     </div>
     <div class="card"><h3>⭐ 관심고객</h3><ul class="list" id="starList"></ul></div>
@@ -265,13 +275,13 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.14-20';
+const APP_VERSION = '2026.10.14-21';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적'};
 
 function defaults() {
-  return {settings: {fcName: '현미숙 FC', signature: '삼성생명 FC 현미숙 드림', lastBackup: ''}, customers: [], dbleads: [], prospects: [], ceos: [], goals: {}, perf: [], routines: defaultRoutines(), routineLog: {}, edu: []};
+  return {settings: {fcName: '현미숙 FC', signature: '삼성생명 FC 현미숙 드림', lastBackup: ''}, customers: [], dbleads: [], prospects: [], ceos: [], goals: {}, perf: [], routines: defaultRoutines(), routineLog: {}, edu: [], tasks: []};
 }
 function load() {
   try {
@@ -407,6 +417,58 @@ const templateCard = (kind, p) => `<div class="card"><h3>✨ 상담 문구 만�
   <textarea id="aiOut" placeholder="위 버튼을 누르면 문구가 만들어집니다. 자유롭게 고쳐서 쓰세요."></textarea>
   <div class="row" style="margin-top:8px"><button class="btn grow" onclick="copyText($('aiOut').value)">복사하기</button></div></div>`;
 
+/* ───────── ✏️ 내가 적는 할 일 ───────── */
+// 오늘(과 지난날 못 한) 할 일을 보여 주고, 완료한 일은 그날만 줄 그어 보여 줍니다
+function renderTasks() {
+  const t = today();
+  if (!$('taskDate').value) $('taskDate').value = t;
+  const show = db.tasks.filter(k => k.done ? k.doneAt === t : k.date <= t)
+    .sort((a, b) => a.done - b.done || a.date.localeCompare(b.date));
+  $('taskList').innerHTML = show.map(k => `<li class="task${k.done ? ' done' : ''}">
+      <input type="checkbox"${k.done ? ' checked' : ''} onchange="toggleTask('${k.id}')" aria-label="완료">
+      <span class="txt" onclick="editTask('${k.id}')">${esc(k.text)}</span>
+      ${!k.done && k.date < t ? `<span class="tag overdue">${k.date.slice(5).replace('-', '/')}부터</span>` : ''}
+      <button class="btn sec sm" onclick="deleteTask('${k.id}')" aria-label="삭제">✕</button></li>`).join('');
+  const later = db.tasks.filter(k => !k.done && k.date > t).sort((a, b) => a.date.localeCompare(b.date));
+  $('taskLater').innerHTML = later.length ? `<a href="#" onclick="showLaterTasks();return false">예정된 할 일 ${later.length}건</a>` : '';
+}
+function addTask() {
+  const text = $('taskInput').value.trim();
+  if (!text) { $('taskInput').focus(); return; }
+  const date = $('taskDate').value || today();
+  db.tasks.push({id: uid(), text, date, done: false});
+  save(); $('taskInput').value = ''; $('taskDate').value = today(); renderTasks();
+  toast(date === today() ? '오늘 할 일에 추가했어요.' : `${date.slice(5).replace('-', '/')} 할 일로 추가했어요.`);
+}
+function toggleTask(id) {
+  const k = db.tasks.find(x => x.id === id);
+  k.done = !k.done; k.doneAt = k.done ? today() : '';
+  save(); renderTasks(); if (k.done) toast('잘하셨어요! 👍');
+}
+function editTask(id) {
+  const k = db.tasks.find(x => x.id === id);
+  const v = prompt('할 일 고치기', k.text);
+  if (v === null) return;
+  if (!v.trim()) return deleteTask(id);
+  k.text = v.trim(); save(); renderTasks();
+}
+function deleteTask(id) {
+  db.tasks = db.tasks.filter(x => x.id !== id);
+  save(); renderTasks(); if (sheetOpen() && $('sheetTitle').textContent === '예정된 할 일') showLaterTasks();
+}
+function showLaterTasks() {
+  const later = db.tasks.filter(k => !k.done && k.date > today()).sort((a, b) => a.date.localeCompare(b.date));
+  openSheet('예정된 할 일', `<div class="card"><ul class="list">${later.map(k => `<li class="task">
+      <span class="tag">${k.date.slice(5).replace('-', '/')}(${WEEK(k.date)})</span><span class="txt">${esc(k.text)}</span>
+      <button class="btn sec sm" onclick="deleteTask('${k.id}')" aria-label="삭제">✕</button></li>`).join('') || '<li class="empty">예정된 할 일이 없습니다.</li>'}</ul></div>`);
+}
+// 지난 완료 기록이 너무 쌓이지 않게 30일 지난 완료 항목은 정리
+function cleanTasks() {
+  const cut = new Date(); cut.setDate(cut.getDate() - 30); const c = ymd(cut);
+  const n = db.tasks.length; db.tasks = db.tasks.filter(k => !k.done || (k.doneAt || '') >= c);
+  if (db.tasks.length !== n) save();
+}
+
 /* ───────── 홈 ───────── */
 function todoItems() {
   const t = today(), items = [];
@@ -447,6 +509,7 @@ function renderHome() {
     ['이번 달 상담', s.consult + '건'], ['이번 달 계약', s.contract + '건'],
   ].map(([k, v]) => `<div class="stat"><small>${k}</small><b>${v}</b></div>`).join('');
 
+  renderTasks();
   $('todoList').innerHTML = todo.length ? todo.map(({p, kind, tag}) => personItem(kind, p, esc(p.nextTodo || p.memo || ''), tag)).join('')
     : '<li class="empty">오늘 연락할 고객이 없습니다 👍</li>';
 
@@ -1242,7 +1305,7 @@ function importData(input) {
   r.onload = () => {
     try {
       const d = JSON.parse(r.result);
-      if (!Array.isArray(d.customers) || !Array.isArray(d.ceos) || !Array.isArray(d.perf) || (d.prospects && !Array.isArray(d.prospects)) || (d.dbleads && !Array.isArray(d.dbleads)) || (d.edu && !Array.isArray(d.edu))) throw 0;
+      if (!Array.isArray(d.customers) || !Array.isArray(d.ceos) || !Array.isArray(d.perf) || (d.prospects && !Array.isArray(d.prospects)) || (d.dbleads && !Array.isArray(d.dbleads)) || (d.edu && !Array.isArray(d.edu)) || (d.tasks && !Array.isArray(d.tasks))) throw 0;
       if (!confirm(`백업 파일을 불러올까요?\n고객 ${d.customers.length}명, DB고객 ${(d.dbleads || []).length}명, 가망고객 ${(d.prospects || []).length}명, CEO ${d.ceos.length}곳, 실적 ${d.perf.length}건\n※ 지금 기기의 데이터는 백업 내용으로 바뀝니다.`)) return;
       const base = defaults();
       db = {...base, ...d, settings: {...base.settings, ...d.settings}};
@@ -1258,6 +1321,7 @@ function resetAll() {
 }
 
 /* ───────── 시작 ───────── */
+cleanTasks();
 showPage(location.hash.slice(1) || 'home');
 loadLibs();
 // 첫 화면: 앱을 처음 열 때만 잠깐 보여 주고 사라집니다 (누르면 바로 닫힘)
