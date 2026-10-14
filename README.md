@@ -40,8 +40,9 @@
 
 ### 새 버전을 올릴 때
 
-`sw.js`의 `const CACHE = 'hmsfc-v2'` 숫자를 하나 올립니다(v3, v4 …).
-그래야 휴대폰에 저장된 옛 화면이 새 화면으로 바뀝니다.
+`sw.js`의 `CACHE` 숫자와 `index.html`의 `APP_VERSION`을 올립니다.
+앱은 열거나 다시 볼 때 새 버전을 확인하고, 받으면 자동으로 한 번 새로고침합니다.
+그래도 옛 화면이면 ⚙️ 설정 → **최신 버전으로 새로고침**을 누릅니다(고객 데이터는 지워지지 않음).
 
 ## 주차별 문구 모음 (`monday-messages.json`, `wednesday-messages.json`)
 
