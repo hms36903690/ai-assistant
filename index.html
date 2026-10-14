@@ -90,6 +90,9 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 .tag.overdue{background:#fee2e2;color:var(--bad)}
 .tag.today{background:#ffedd5;color:var(--warn)}
 .tag.bday{background:#fce7f3;color:#be185d}
+.tag.done{background:#dcfce7;color:var(--ok)}
+.routine{padding:10px 0;border-bottom:1px solid var(--line)}
+.routine:last-child{border-bottom:0}
 .star{border:0;background:transparent;font-size:22px;line-height:1;padding:6px;color:#cbd5e1;flex:none}
 .star.on{color:#f59e0b}
 .btn.sec.on{background:#fef3c7;border-color:#fcd34d;color:#92400e}
@@ -138,6 +141,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
   <section class="page" id="page-home">
     <div class="hero"><h2 id="helloText"></h2><p id="todayText"></p></div>
     <div id="backupNotice"></div>
+    <div class="card" id="routineCard"></div>
     <div class="stats" id="homeStats"></div>
     <div class="quick">
       <button onclick="editCustomer()">＋ 고객</button>
@@ -233,7 +237,7 @@ const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대
 const PAGES = {home: '홈', customers: '고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적'};
 
 function defaults() {
-  return {settings: {fcName: '현미숙 FC', lastBackup: ''}, customers: [], prospects: [], ceos: [], goals: {}, perf: []};
+  return {settings: {fcName: '현미숙 FC', lastBackup: ''}, customers: [], prospects: [], ceos: [], goals: {}, perf: [], routines: defaultRoutines(), routineLog: {}};
 }
 function load() {
   try {
@@ -415,6 +419,132 @@ function renderHome() {
     : '<li class="empty">고객 목록에서 ☆를 누르면 여기에 모입니다.</li>';
 
   $('homeGoals').innerHTML = goalBars(thisMonth());
+  renderRoutines();
+}
+
+/* ───────── 📅 정기 문자 (매주 정해진 요일·시간에 보내는 문자) ───────── */
+const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const DAY_OPTIONS = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
+const BYDAY = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+function defaultRoutines() {
+  return [
+    {id: 'r_mon', title: '월요일 인사문자', day: 1, time: '08:30',
+      text: '좋은 아침입니다 😊\n새로운 한 주가 시작됐네요.\n이번 주도 건강하고 좋은 일만 가득하시길 바랍니다!\n- {이름}'},
+    {id: 'r_wed', title: '수요상식 문제', day: 3, time: '13:30',
+      text: '[수요상식 퀴즈] 🧠\n\n(이번 주 문제를 여기에 적어 두세요)\n\n정답을 아시면 답장 주세요 😊\n- {이름}'},
+  ];
+}
+const nowHM = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+const routineText = r => r.text.replace(/\{이름\}/g, db.settings.fcName);
+// 가장 최근에 보냈어야 할 날 (오늘 포함)
+function lastDue(r) {
+  const d = new Date(); d.setDate(d.getDate() - (d.getDay() - r.day + 7) % 7); return ymd(d);
+}
+// 다음에 보낼 날 (오늘 시간이 아직 안 지났으면 오늘)
+function nextDue(r) {
+  const d = new Date(), diff = (r.day - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + (diff === 0 && nowHM() > r.time ? 7 : diff)); return ymd(d);
+}
+function renderRoutines() {
+  const t = today();
+  const items = db.routines.map(r => {
+    const date = lastDue(r), done = !!db.routineLog[r.id + '|' + date], isToday = date === t;
+    return {r, date, done, isToday};
+  }).filter(x => x.isToday || !x.done);
+  const rows = items.map(({r, date, done, isToday}) => {
+    const tag = done ? '<span class="tag done">✓ 보냈어요</span>'
+      : !isToday ? `<span class="tag overdue">지난 ${DAYS[r.day]}요일 못 보냄</span>`
+      : nowHM() >= r.time ? `<span class="tag overdue">⏰ ${r.time} 보낼 시간!</span>` : `<span class="tag today">오늘 ${r.time}</span>`;
+    return `<div class="routine"><div class="row"><b class="grow">${esc(r.title)}</b>${tag}</div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn sec sm grow" onclick="copyText(routineText(db.routines.find(x => x.id === '${r.id}')))">📋 문구 복사</button>
+        <button class="btn sm grow${done ? ' sec' : ''}" onclick="markRoutine('${r.id}','${date}')">${done ? '보냄 취소' : '✓ 보냈어요'}</button>
+        <button class="btn sec sm" onclick="editRoutine('${r.id}')">문구 수정</button></div></div>`;
+  }).join('');
+  const upcoming = [...db.routines].sort((a, b) => (nextDue(a) + a.time).localeCompare(nextDue(b) + b.time))[0];
+  $('routineCard').innerHTML = `<div class="row" style="margin-bottom:4px"><h3 class="grow" style="margin:0">📅 정기 문자</h3><button class="btn sec sm" onclick="manageRoutines()">관리 · 알람</button></div>
+    ${rows || `<div class="muted" style="padding:8px 0">오늘 보낼 정기 문자가 없습니다.${upcoming ? ` 다음: ${DAYS[upcoming.day]}요일 ${upcoming.time} ${esc(upcoming.title)}` : ''}</div>`}`;
+}
+function markRoutine(id, date) {
+  const k = id + '|' + date;
+  if (db.routineLog[k]) delete db.routineLog[k]; else db.routineLog[k] = true;
+  save(); renderRoutines(); if (db.routineLog[k]) toast('수고하셨어요! 👍');
+}
+function manageRoutines() {
+  openSheet('정기 문자 · 알람', `
+    <div class="notice" style="background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a">
+      <b>알람은 휴대폰 캘린더가 울려 줍니다.</b> 이 앱은 닫혀 있으면 스스로 알람을 울릴 수 없어서, 아래 버튼으로 휴대폰 캘린더에 <b>매주 반복 일정</b>을 한 번만 등록해 두면 정해진 시간마다 알림이 옵니다. 알림을 받으면 앱을 열어 <b>문구 복사 → 문자 보내기 → ✓ 보냈어요</b>를 누르세요.</div>
+    ${db.routines.map(r => `<div class="card"><div class="row"><b class="grow">${esc(r.title)}</b><span class="tag">매주 ${DAYS[r.day]}요일 ${r.time}</span></div>
+      <div class="row" style="margin-top:10px">
+        <a class="btn sm grow" style="text-align:center;text-decoration:none;line-height:22px" href="${gcalUrl(r)}" target="_blank" rel="noopener">📅 구글 캘린더에 알람 등록</a>
+        <button class="btn sec sm" onclick="editRoutine('${r.id}')">수정</button></div></div>`).join('') || '<div class="empty">정기 문자가 없습니다.</div>'}
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn sec grow" onclick="editRoutine()">＋ 정기 문자 추가</button>
+      <button class="btn sec grow" onclick="downloadIcs()">📲 캘린더 파일 받기</button></div>
+    <p class="muted" style="margin:0">· <b>구글 캘린더</b>: 버튼을 누르고 저장하면 됩니다. 저장 화면에서 알림을 <b>"이벤트 시작 시"</b>로 바꿔 주세요.<br>
+    · <b>삼성 캘린더·아이폰</b>: "캘린더 파일 받기"를 누른 뒤 받은 파일을 열면 캘린더에 추가됩니다(모든 정기 문자가 한 번에 등록됩니다).<br>
+    · 요일이나 시간을 바꾸면 캘린더 일정도 다시 등록해 주세요.</p>`);
+}
+const ROUTINE_FIELDS = [
+  {k: 'title', label: '이름 *', ph: '예: 월요일 인사문자'},
+  {k: 'day', label: '요일', type: 'select', options: DAY_OPTIONS},
+  {k: 'time', label: '시간', type: 'time'},
+  {k: 'text', label: '보낼 문구 ({이름}은 내 이름으로 바뀝니다)', type: 'textarea', full: true},
+];
+function editRoutine(id) {
+  const r = db.routines.find(x => x.id === id) || {day: 1, time: '09:00', text: ''};
+  const data = {...r, day: DAY_OPTIONS[(r.day + 6) % 7]};
+  openSheet(id ? '정기 문자 수정' : '정기 문자 추가', formHtml(ROUTINE_FIELDS, data) + `<div class="row" style="margin-top:14px">
+    <button class="btn grow" onclick="saveRoutine('${id || ''}')">저장</button>
+    ${id ? `<button class="btn danger" onclick="removeRoutine('${id}')">삭제</button>` : ''}</div>`);
+  $('f_text').style.minHeight = '160px';
+}
+function saveRoutine(id) {
+  const v = readForm(ROUTINE_FIELDS);
+  if (!v.title || !v.time) return alert('이름과 시간을 입력해 주세요.');
+  v.day = (DAY_OPTIONS.indexOf(v.day) + 1) % 7;
+  const r = db.routines.find(x => x.id === id);
+  if (r) Object.assign(r, v); else db.routines.push({id: uid(), ...v});
+  save(); refresh(); toast('저장했습니다.'); manageRoutines();
+}
+function removeRoutine(id) {
+  if (!confirm('이 정기 문자를 삭제할까요? (캘린더에 등록한 알람은 캘린더에서 따로 지워 주세요)')) return;
+  db.routines = db.routines.filter(x => x.id !== id);
+  save(); refresh(); manageRoutines();
+}
+// 캘린더 일정 시간 (YYYYMMDDTHHMMSS), 10분짜리 일정
+function calTimes(r) {
+  const start = new Date(nextDue(r) + 'T' + r.time + ':00'), end = new Date(start.getTime() + 10 * 60000);
+  const f = d => ymd(d).replace(/-/g, '') + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + '00';
+  return [f(start), f(end)];
+}
+const appUrl = () => location.href.split('#')[0];
+function gcalUrl(r) {
+  const [s, e] = calTimes(r);
+  return 'https://calendar.google.com/calendar/render?' + new URLSearchParams({
+    action: 'TEMPLATE', text: `📩 ${r.title} 보내기`, dates: `${s}/${e}`, ctz: 'Asia/Seoul',
+    recur: `RRULE:FREQ=WEEKLY;BYDAY=${BYDAY[r.day]}`,
+    details: `영업비서 앱을 열어 문구를 복사해서 보내세요.\n${appUrl()}`,
+  });
+}
+function downloadIcs() {
+  const icsEsc = t => String(t).replace(/\\/g, '\\\\').replace(/[,;]/g, m => '\\' + m).replace(/\n/g, '\\n');
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//hmsfc//sales-assistant//KO', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    'BEGIN:VTIMEZONE', 'TZID:Asia/Seoul', 'BEGIN:STANDARD', 'DTSTART:19700101T000000', 'TZOFFSETFROM:+0900', 'TZOFFSETTO:+0900', 'TZNAME:KST', 'END:STANDARD', 'END:VTIMEZONE'];
+  db.routines.forEach(r => {
+    const [s, e] = calTimes(r);
+    lines.push('BEGIN:VEVENT', `UID:${r.id}@hmsfc`, `DTSTAMP:${stamp}`, `DTSTART;TZID=Asia/Seoul:${s}`, `DTEND;TZID=Asia/Seoul:${e}`,
+      `RRULE:FREQ=WEEKLY;BYDAY=${BYDAY[r.day]}`, `SUMMARY:${icsEsc('📩 ' + r.title + ' 보내기')}`,
+      `DESCRIPTION:${icsEsc('영업비서 앱을 열어 문구를 복사해서 보내세요.\n' + appUrl())}`,
+      'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsEsc(r.title + ' 보낼 시간입니다')}`, 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\r\n')], {type: 'text/calendar;charset=utf-8'}));
+  a.download = '정기문자_알람.ics'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('파일을 받았습니다. 열어서 캘린더에 추가하세요.');
 }
 
 /* ───────── 개인 고객 ───────── */
@@ -727,6 +857,7 @@ function openSettings() {
       <div class="row"><button class="btn grow" onclick="exportData()">백업 파일 내보내기</button><button class="btn sec grow" onclick="$('importFile').click()">백업 불러오기</button></div></div>
     <div class="card"><h3>🔒 개인정보 안내</h3>
       <p class="muted" style="margin:0">고객 정보는 서버로 전송되지 않습니다. 다만 휴대폰 분실에 대비해 화면 잠금을 꼭 사용하시고, 백업 파일은 카톡·메일 등으로 공유하지 마세요. 실제 업무 사용 전 회사의 개인정보·보안 규정을 확인하세요.</p></div>
+    <div class="card"><h3>📅 정기 문자 · 알람</h3><p class="muted" style="margin-top:0">매주 보내는 인사·상식 문자와 알람을 관리합니다.</p><button class="btn sec" onclick="manageRoutines()">정기 문자 관리</button></div>
     <div class="card"><h3>초기화</h3><button class="btn danger" onclick="resetAll()">모든 데이터 삭제</button></div>`);
 }
 function exportData() {
