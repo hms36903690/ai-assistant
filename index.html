@@ -461,25 +461,28 @@ function defaultRoutines() {
   ];
 }
 const nowHM = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
-// 월요일 인사문자 모음 (monday-messages.json): 그 주 월요일 날짜에 맞는 문구를 자동으로 씁니다
-let MONDAY_MSGS = {};
-const usesLibrary = r => r.library === 'monday' || r.id === 'r_mon';
-const libraryText = r => usesLibrary(r) ? MONDAY_MSGS[lastDue(r)] : '';
+// 주차별 문구 모음 (monday-messages.json, wednesday-messages.json): 그 주 날짜에 맞는 문구를 자동으로 씁니다
+const LIBS = {
+  monday: {file: 'monday-messages.json', day: 1, title: '월요일 인사문자', msgs: {}},
+  wednesday: {file: 'wednesday-messages.json', day: 3, title: '수요상식 문제', msgs: {}},
+};
+const libKey = r => r.library || ({r_mon: 'monday', r_wed: 'wednesday'})[r.id] || '';
+const libraryText = r => { const k = libKey(r); return k ? LIBS[k].msgs[lastDue(r)] : ''; };
 const routineText = r => libraryText(r) || r.text.replace(/\{이름\}/g, db.settings.fcName);
-function loadMondayMsgs() {
+function loadLibs() {
   if (location.protocol === 'file:') return;
-  fetch('monday-messages.json', {cache: 'no-cache'}).then(r => r.json())
-    .then(d => { MONDAY_MSGS = d; if ($('page-home').classList.contains('active')) renderRoutines(); }).catch(() => {});
+  Object.values(LIBS).forEach(L => fetch(L.file, {cache: 'no-cache'}).then(r => r.json())
+    .then(d => { L.msgs = d; if ($('page-home').classList.contains('active')) renderRoutines(); }).catch(() => {}));
 }
-// '2026-11-09' → '11월 2주 월요일 (11/9)'
-const mondayLabel = k => `${+k.slice(5, 7)}월 ${Math.ceil(+k.slice(8) / 7)}주 월요일 (${+k.slice(5, 7)}/${+k.slice(8)})`;
-function showMondayMsgs() {
-  const dates = Object.keys(MONDAY_MSGS).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
-  const thisMon = lastDue({day: 1});
-  openSheet('월요일 인사문자 모음', dates.length ? dates.map(k => `<div class="card"${k === thisMon ? ' style="border-color:var(--accent)"' : ''}>
-      <div class="row" style="margin-bottom:6px"><b class="grow">${mondayLabel(k)}</b>${k === thisMon ? '<span class="tag today">이번 주</span>' : k < thisMon ? '<span class="tag s-no">지남</span>' : ''}</div>
-      <div style="white-space:pre-line;font-size:14px">${esc(MONDAY_MSGS[k])}</div>
-      <button class="btn sec sm" style="margin-top:8px" onclick="copyText(MONDAY_MSGS['${k}'])">📋 복사</button></div>`).join('')
+// '2026-11-09' → '11월 2주 월요일 (11/9)' (그 달의 몇 번째 월요일·수요일인지)
+const weekLabel = k => `${+k.slice(5, 7)}월 ${Math.ceil(+k.slice(8) / 7)}주 ${WEEK(k)}요일 (${+k.slice(5, 7)}/${+k.slice(8)})`;
+function showLib(key) {
+  const L = LIBS[key], dates = Object.keys(L.msgs).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
+  const cur = lastDue({day: L.day});
+  openSheet(L.title + ' 모음', dates.length ? dates.map(k => `<div class="card"${k === cur ? ' style="border-color:var(--accent)"' : ''}>
+      <div class="row" style="margin-bottom:6px"><b class="grow">${weekLabel(k)}</b>${k === cur ? '<span class="tag today">이번 주</span>' : k < cur ? '<span class="tag s-no">지남</span>' : ''}</div>
+      <div style="white-space:pre-line;font-size:14px">${esc(L.msgs[k])}</div>
+      <button class="btn sec sm" style="margin-top:8px" onclick="copyText(LIBS['${key}'].msgs['${k}'])">📋 복사</button></div>`).join('')
     : '<div class="empty">준비된 문구가 없습니다. 인터넷에 연결된 상태에서 다시 열어 주세요.</div>');
 }
 // 가장 최근에 보냈어야 할 날 (오늘 포함)
@@ -505,8 +508,8 @@ function renderRoutines() {
       <div class="row" style="margin-top:8px">
         <button class="btn sec sm grow" onclick="copyText(routineText(db.routines.find(x => x.id === '${r.id}')))">📋 문구 복사</button>
         <button class="btn sm grow${done ? ' sec' : ''}" onclick="markRoutine('${r.id}','${date}')">${done ? '보냄 취소' : '✓ 보냈어요'}</button>
-        ${libraryText(r) ? `<button class="btn sec sm" onclick="showMondayMsgs()">문구 보기</button>` : `<button class="btn sec sm" onclick="editRoutine('${r.id}')">문구 수정</button>`}</div>
-      ${libraryText(r) ? `<div class="muted" style="margin-top:6px">📝 ${mondayLabel(lastDue(r))} 문구가 준비되어 있어요</div>` : ''}</div>`;
+        ${libraryText(r) ? `<button class="btn sec sm" onclick="showLib('${libKey(r)}')">문구 보기</button>` : `<button class="btn sec sm" onclick="editRoutine('${r.id}')">문구 수정</button>`}</div>
+      ${libraryText(r) ? `<div class="muted" style="margin-top:6px">📝 ${weekLabel(lastDue(r))} 문구가 준비되어 있어요</div>` : ''}</div>`;
   }).join('');
   const upcoming = [...db.routines].sort((a, b) => (nextDue(a) + a.time).localeCompare(nextDue(b) + b.time))[0];
   $('routineCard').innerHTML = `<div class="row" style="margin-bottom:4px"><h3 class="grow" style="margin:0">📅 정기 문자</h3><button class="btn sec sm" onclick="manageRoutines()">관리 · 알람</button></div>
@@ -525,7 +528,7 @@ function manageRoutines() {
       <div class="row" style="margin-top:10px">
         <a class="btn sm grow" style="text-align:center;text-decoration:none;line-height:22px" href="${gcalUrl(r)}" target="_blank" rel="noopener">📅 구글 캘린더에 알람 등록</a>
         <button class="btn sec sm" onclick="editRoutine('${r.id}')">수정</button></div></div>`).join('') || '<div class="empty">정기 문자가 없습니다.</div>'}
-    <button class="btn sec" style="width:100%;margin-bottom:8px" onclick="showMondayMsgs()">📝 월요일 인사문자 모음 보기</button>
+    <div class="row" style="margin-bottom:8px"><button class="btn sec grow" onclick="showLib('monday')">📝 월요일 인사문자 모음</button><button class="btn sec grow" onclick="showLib('wednesday')">🧠 수요상식 모음</button></div>
     <div class="row" style="margin-bottom:12px">
       <button class="btn sec grow" onclick="editRoutine()">＋ 정기 문자 추가</button>
       <button class="btn sec grow" onclick="downloadIcs()">📲 캘린더 파일 받기</button></div>
@@ -1128,7 +1131,7 @@ function resetAll() {
 
 /* ───────── 시작 ───────── */
 showPage(location.hash.slice(1) || 'home');
-loadMondayMsgs();
+loadLibs();
 
 // 앱 설치·오프라인 지원 (https 주소에서만 동작, 파일을 직접 열면 건너뜀)
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
