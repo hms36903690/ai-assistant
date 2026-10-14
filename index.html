@@ -272,7 +272,6 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
     <div class="week-wrap"><table class="week" id="weekTable"></table></div>
     <div class="row" style="margin-top:12px">
       <button class="btn sec grow" onclick="addWeekRow()">＋ 줄 추가</button>
-      <button class="btn sec" id="weekEditBtn" onclick="weekEdit=!weekEdit;renderWeekly()">✏️ 줄 편집</button>
       <button class="btn sec" onclick="resetWeekly()">처음 계획표로 되돌리기</button></div>
   </section>
 
@@ -310,7 +309,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.14-36';
+const APP_VERSION = '2026.10.14-37';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적', weekly: '주간계획'};
@@ -554,9 +553,8 @@ const weekRows = () => Object.entries(db.weekly || {}).sort((a, b) => a[1].order
 let weekTimer = null;
 function weekSaveSoon() { clearTimeout(weekTimer); weekTimer = setTimeout(() => { save(); renderPlanCard(); }, 600); }
 const fitTa = t => { t.style.height = 'auto'; t.style.height = Math.max(70, t.scrollHeight) + 'px'; };
-let weekEdit = false;
+const weekEdit = false; // 줄 편집 칸은 쓰지 않음 (요청에 따라 숨김)
 function renderWeekly() {
-  $('weekEditBtn').textContent = weekEdit ? '✓ 편집 끝' : '✏️ 줄 편집';
   const td = new Date().getDay();
   // '구분' 칸은 없이, '줄 편집'을 눌렀을 때만 색·순서·삭제 버튼 칸이 나타납니다
   const head = `<tr>${weekEdit ? '<th class="lab">줄 편집</th>' : ''}${WEEK_COLS.map(d => `<th class="${d === td ? 'today' : ''}">${DAYS[d]}${d === td ? ' (오늘)' : ''}</th>`).join('')}</tr>`;
