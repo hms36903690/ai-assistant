@@ -471,11 +471,13 @@ function loadMondayMsgs() {
   fetch('monday-messages.json', {cache: 'no-cache'}).then(r => r.json())
     .then(d => { MONDAY_MSGS = d; if ($('page-home').classList.contains('active')) renderRoutines(); }).catch(() => {});
 }
+// '2026-11-09' → '11월 2주 월요일 (11/9)'
+const mondayLabel = k => `${+k.slice(5, 7)}월 ${Math.ceil(+k.slice(8) / 7)}주 월요일 (${+k.slice(5, 7)}/${+k.slice(8)})`;
 function showMondayMsgs() {
   const dates = Object.keys(MONDAY_MSGS).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
   const thisMon = lastDue({day: 1});
   openSheet('월요일 인사문자 모음', dates.length ? dates.map(k => `<div class="card"${k === thisMon ? ' style="border-color:var(--accent)"' : ''}>
-      <div class="row" style="margin-bottom:6px"><b class="grow">${k.slice(5).replace('-', '월 ')}일 월요일</b>${k === thisMon ? '<span class="tag today">이번 주</span>' : k < thisMon ? '<span class="tag s-no">지남</span>' : ''}</div>
+      <div class="row" style="margin-bottom:6px"><b class="grow">${mondayLabel(k)}</b>${k === thisMon ? '<span class="tag today">이번 주</span>' : k < thisMon ? '<span class="tag s-no">지남</span>' : ''}</div>
       <div style="white-space:pre-line;font-size:14px">${esc(MONDAY_MSGS[k])}</div>
       <button class="btn sec sm" style="margin-top:8px" onclick="copyText(MONDAY_MSGS['${k}'])">📋 복사</button></div>`).join('')
     : '<div class="empty">준비된 문구가 없습니다. 인터넷에 연결된 상태에서 다시 열어 주세요.</div>');
@@ -504,7 +506,7 @@ function renderRoutines() {
         <button class="btn sec sm grow" onclick="copyText(routineText(db.routines.find(x => x.id === '${r.id}')))">📋 문구 복사</button>
         <button class="btn sm grow${done ? ' sec' : ''}" onclick="markRoutine('${r.id}','${date}')">${done ? '보냄 취소' : '✓ 보냈어요'}</button>
         ${libraryText(r) ? `<button class="btn sec sm" onclick="showMondayMsgs()">문구 보기</button>` : `<button class="btn sec sm" onclick="editRoutine('${r.id}')">문구 수정</button>`}</div>
-      ${libraryText(r) ? '<div class="muted" style="margin-top:6px">📝 이번 주 문구가 준비되어 있어요</div>' : ''}</div>`;
+      ${libraryText(r) ? `<div class="muted" style="margin-top:6px">📝 ${mondayLabel(lastDue(r))} 문구가 준비되어 있어요</div>` : ''}</div>`;
   }).join('');
   const upcoming = [...db.routines].sort((a, b) => (nextDue(a) + a.time).localeCompare(nextDue(b) + b.time))[0];
   $('routineCard').innerHTML = `<div class="row" style="margin-bottom:4px"><h3 class="grow" style="margin:0">📅 정기 문자</h3><button class="btn sec sm" onclick="manageRoutines()">관리 · 알람</button></div>
