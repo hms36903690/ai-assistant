@@ -276,7 +276,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
     <div class="week-wrap"><table class="week" id="weekTable"></table></div>
     <div class="row" style="margin-top:12px">
       <button class="btn sec grow" onclick="addWeekRow()">＋ 줄 추가</button>
-      <button class="btn sec" onclick="resetWeekly()">처음 계획표로 되돌리기</button></div>
+      <button class="btn sec" onclick="pickWeekRowToDelete()">줄 삭제</button></div>
   </section>
 
   <!-- 실적 -->
@@ -313,7 +313,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.14-38';
+const APP_VERSION = '2026.10.14-39';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적', weekly: '주간계획'};
@@ -577,9 +577,19 @@ function addWeekRow() {
   db.weekly[id] = {order, label: '', color: WEEK_COLORS[order % WEEK_COLORS.length], cells: {1: '', 2: '', 3: '', 4: '', 5: '', 6: '', 0: ''}};
   save(); renderWeekly();
 }
+// '줄 삭제': 줄 목록을 띄워서 지울 줄을 고릅니다
+function pickWeekRowToDelete() {
+  const rows = weekRows();
+  const preview = r => { const t = WEEK_COLS.map(d => ((r.cells || {})[d] || '').trim()).find(Boolean); return t ? t.split('\n')[0] : '(빈 줄)'; };
+  openSheet('지울 줄 고르기', rows.length ? `<div class="card"><ul class="list">${rows.map(([id, r]) => `<li class="task">
+      <span style="flex:none;width:22px;height:22px;border-radius:6px;background:${esc(r.color)};border:1px solid var(--line)"></span>
+      <span class="txt">${esc(preview(r))}</span>
+      <button class="btn danger sm" onclick="delWeekRow('${id}')">삭제</button></li>`).join('')}</ul></div>`
+    : '<div class="empty">지울 줄이 없습니다.</div>');
+}
 function delWeekRow(id) {
-  if (!confirm(`'${db.weekly[id].label || '이 줄'}'을(를) 지울까요?`)) return;
-  delete db.weekly[id]; save(); renderWeekly();
+  if (!confirm('이 줄을 지울까요? 줄 안의 요일별 내용도 함께 지워집니다.')) return;
+  delete db.weekly[id]; save(); renderWeekly(); if (sheetOpen()) pickWeekRowToDelete(); toast('줄을 지웠어요.');
 }
 function moveWeekRow(id, dir) {
   const rows = weekRows(), i = rows.findIndex(([k]) => k === id), j = i + dir;
