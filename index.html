@@ -48,6 +48,9 @@ button{cursor:pointer}
 .page.active{display:block}
 .hero{background:linear-gradient(135deg,#102a43,#243b53);color:#fff;border-radius:18px;padding:20px 18px;margin-bottom:14px}
 .hero h2{margin:0 0 4px;font-size:21px}
+.hero .quote{margin:10px 0 10px;padding:10px 12px;background:rgba(255,255,255,.1);border-left:3px solid #f59e0b;border-radius:8px;font-size:15px;line-height:1.55;cursor:pointer}
+.hero .quote small{display:block;color:#fcd34d;font-size:12px;font-weight:700;margin-bottom:2px}
+.hero .quote .who{display:block;font-size:12px;opacity:.75;margin-top:2px}
 .hero p{margin:0;opacity:.85;font-size:14px}
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px}
@@ -165,7 +168,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 
   <!-- 홈 -->
   <section class="page" id="page-home">
-    <div class="hero"><h2 id="helloText"></h2><p id="todayText"></p></div>
+    <div class="hero"><h2 id="helloText"></h2><div class="quote" id="quoteText" onclick="quoteShift++;renderQuote()" title="누르면 다른 말 보기"></div><p id="todayText"></p></div>
     <div id="backupNotice"></div>
     <div class="card" id="routineCard"></div>
     <div class="card" id="bdayCard" style="display:none"></div>
@@ -283,7 +286,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.14-26';
+const APP_VERSION = '2026.10.14-27';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적'};
@@ -504,6 +507,70 @@ function cleanTasks() {
   if (db.tasks.length !== n) save();
 }
 
+/* ───────── 💬 오늘의 확언 · 한마디 (날마다 바뀜, 누르면 다음 말) ───────── */
+const QUOTES = [
+  ['나는 오늘도 고객에게 꼭 필요한 사람이다.'],
+  ['내가 전하는 진심은 반드시 고객에게 닿는다.'],
+  ['천 리 길도 한 걸음부터.', '속담'],
+  ['나는 한 사람 한 사람을 소중히 대하는 설계사다.'],
+  ['오늘 만나는 모든 분이 나의 귀한 인연이다.'],
+  ['배우고 때때로 익히면 또한 기쁘지 아니한가.', '공자, 논어'],
+  ['거절은 끝이 아니라 다음 만남의 시작이다.'],
+  ['나는 매일 조금씩 성장하고 있다.'],
+  ['시작이 반이다.', '속담'],
+  ['나의 꾸준함이 나의 가장 큰 실력이다.'],
+  ['나는 고객의 가족까지 지키는 든든한 동반자다.'],
+  ['말 한마디로 천 냥 빚을 갚는다.', '속담'],
+  ['오늘 한 통의 안부가 내일의 신뢰가 된다.'],
+  ['나는 웃는 얼굴로 하루를 시작한다.'],
+  ['웃으면 복이 온다.', '속담'],
+  ['나는 내가 하는 일에 자부심을 느낀다.'],
+  ['오늘 할 일에 집중하면 결과는 따라온다.'],
+  ['아는 것은 좋아하는 것만 못하고, 좋아하는 것은 즐기는 것만 못하다.', '공자, 논어'],
+  ['나는 배우는 것을 멈추지 않는다.'],
+  ['감사하는 마음이 좋은 일을 불러온다.'],
+  ['티끌 모아 태산.', '속담'],
+  ['나는 충분히 잘하고 있다.'],
+  ['작은 약속을 지키는 것이 큰 신뢰를 만든다.'],
+  ['낙숫물이 댓돌을 뚫는다.', '속담'],
+  ['나는 고객의 이야기를 끝까지 들어 주는 사람이다.'],
+  ['오늘의 땀은 반드시 열매가 된다.'],
+  ['세 사람이 길을 가면 그중에 반드시 나의 스승이 있다.', '공자, 논어'],
+  ['나는 긍정의 에너지를 나누는 사람이다.'],
+  ['어제보다 한 걸음만 더 나아가면 된다.'],
+  ['가는 말이 고와야 오는 말이 곱다.', '속담'],
+  ['나의 정성은 시간이 지날수록 빛난다.'],
+  ['나는 건강한 몸과 마음으로 일한다.'],
+  ['천재는 1%의 영감과 99%의 노력으로 이루어진다.', '토머스 에디슨'],
+  ['좋은 사람 곁에는 좋은 사람이 모인다.'],
+  ['나는 오늘도 누군가의 걱정을 덜어 주는 일을 한다.'],
+  ['고생 끝에 낙이 온다.', '속담'],
+  ['포기하지 않는 한 실패는 없다.'],
+  ['나는 나를 믿는다.'],
+  ['백지장도 맞들면 낫다.', '속담'],
+  ['진심은 서두르지 않아도 전해진다.'],
+  ['오늘 심은 씨앗이 내년의 꽃이 된다.'],
+  ['나는 최선을 다하고, 결과는 편안하게 받아들인다.'],
+  ['고객의 웃음이 나의 보람이다.'],
+  ['나는 기회를 알아보는 눈을 가지고 있다.'],
+  ['한 번 더 연락하는 용기가 길을 연다.'],
+  ['나는 가족에게 자랑스러운 사람이다.'],
+  ['바쁠수록 기본을 지킨다.'],
+  ['나는 오늘도 좋은 소식을 만들어 간다.'],
+  ['마음이 따뜻한 사람에게 사람이 모인다.'],
+  ['나는 쉬어 갈 줄도 아는 사람이다.'],
+  ['꾸준한 하루가 모여 특별한 한 해가 된다.'],
+  ['나는 고객이 먼저 찾는 설계사가 된다.'],
+  ['오늘 하루도 감사합니다.'],
+];
+let quoteShift = 0;
+function renderQuote() {
+  // 날짜마다 다른 말 (2026-01-01부터 하루에 하나씩, 다 돌면 처음부터)
+  const day = Math.floor((new Date(today() + 'T00:00') - new Date('2026-01-01T00:00')) / 86400000);
+  const [text, who] = QUOTES[(((day + quoteShift) % QUOTES.length) + QUOTES.length) % QUOTES.length];
+  $('quoteText').innerHTML = `<small>${who ? '💬 오늘의 한마디' : '✨ 오늘의 확언'}</small>${esc(text)}${who ? `<span class="who">— ${esc(who)}</span>` : ''}`;
+}
+
 /* ───────── 홈 ───────── */
 function todoItems() {
   const t = today(), items = [];
@@ -531,6 +598,7 @@ function monthStats(m) {
 function renderHome() {
   const now = new Date();
   $('helloText').textContent = `안녕하세요, ${db.settings.fcName}님`;
+  renderQuote();
   $('todayText').textContent = now.toLocaleDateString('ko-KR', {year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
 
   const lb = db.settings.lastBackup, total = db.customers.length + db.ceos.length;
