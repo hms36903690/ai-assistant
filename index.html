@@ -316,7 +316,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
     <div class="final-goal">🏆 나의 최종 목표: <b>월 개인소득 1억 원 달성</b><br><small>매일 기록하고, 매주 확인하고, 꾸준히 성장하기!</small></div>
     <div class="card" id="dailyLogCard"></div>
     <div class="card" id="perfCard">
-      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><h3 style="margin:0;cursor:pointer" onclick="perfBars=!perfBars;renderPerf()" title="눌러서 12개월 보기">📊 계약 실적 <small id="perfToggle" class="muted" style="font-size:12px;font-weight:600">12개월 보기 ▾</small></h3><button class="btn sm" style="white-space:nowrap" onclick="editPerf()">＋ 계약 추가</button></div>
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><h3 style="margin:0;cursor:pointer" onclick="perfBars=!perfBars;perfYear=0;renderPerf()" title="눌러서 12개월 보기">📊 계약 실적 <small id="perfToggle" class="muted" style="font-size:12px;font-weight:600">12개월 보기 ▾</small></h3><button class="btn sm" style="white-space:nowrap" onclick="editPerf()">＋ 계약 추가</button></div>
       <div id="perfHistory"></div>
     </div>
     <div class="card"><h3>📈 최근 6개월 소득</h3><div id="fcHistory"></div></div>
@@ -353,7 +353,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.15-99';
+const APP_VERSION = '2026.10.15-100';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: '관심고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
@@ -1939,15 +1939,21 @@ const PERF_FIELDS = [
   {k: 'memo', label: '메모', full: true},
 ];
 // 📊 계약 실적: 이번 달 막대 1개 ('N건 · 금액') — 제목을 누르면 그해 1~12월 막대 펼치기, 막대를 누르면 그 달 계약 목록
-let perfBars = false;
+let perfBars = false, perfYear = 0; // perfYear: 12개월 보기에서 고른 해 (0 = 위에서 고른 달의 해)
+function perfYearGo(n) { perfYear = (perfYear || +($('fcMonth').value || thisMonth()).slice(0, 4)) + n; renderPerf(); }
 function renderPerf() {
-  const m = $('fcMonth').value || thisMonth(), months = [];
-  for (let i = 1; i <= 12; i++) months.push(m.slice(0, 4) + '-' + String(i).padStart(2, '0'));
+  const m = $('fcMonth').value || thisMonth(), year = perfYear || +m.slice(0, 4), months = [];
+  for (let i = 1; i <= 12; i++) months.push(year + '-' + String(i).padStart(2, '0'));
   const st = months.map(monthStats), max = Math.max(1, ...st.map(x => x.premium));
   const bar = (mm, x) => `<div class="row" style="font-size:13px;margin-bottom:6px;cursor:pointer" onclick="perfMonthList('${mm}')" title="눌러서 ${+mm.slice(5)}월 계약 보기">
     <span style="width:34px">${+mm.slice(5)}월</span><div class="bar grow" style="flex:1;height:18px"><i style="width:${x.premium / max * 100}%"></i></div>
     <b style="white-space:nowrap;text-align:right;min-width:92px">${x.contract}건 · ${won(x.premium)}</b></div>`;
-  $('perfHistory').innerHTML = (perfBars ? `<div class="muted" style="font-size:11px;margin-bottom:4px">${m.slice(0, 4)}년</div>` + months.map((mm, i) => bar(mm, st[i])).join('') : bar(m, monthStats(m))) +
+  // 해 바꾸기: ◀ 2026년 ▶ (연도를 눌러도 다음 해)
+  const yearBar = `<div class="row" style="justify-content:center;gap:6px;margin-bottom:8px">
+    <button class="btn sec sm" onclick="perfYearGo(-1)" aria-label="이전 해">◀</button>
+    <button class="btn sec sm" style="min-width:96px;font-weight:800" onclick="perfYearGo(1)" title="눌러서 다음 해 보기">${year}년</button>
+    <button class="btn sec sm" onclick="perfYearGo(1)" aria-label="다음 해">▶</button></div>`;
+  $('perfHistory').innerHTML = (perfBars ? yearBar + months.map((mm, i) => bar(mm, st[i])).join('') : bar(m, monthStats(m))) +
     `<div class="muted" style="font-size:12px">👉 막대를 누르면 그 달 계약 수정</div>`;
   $('perfToggle').textContent = perfBars ? '접기 ▴' : '12개월 보기 ▾';
 }
