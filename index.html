@@ -229,11 +229,12 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
     </div>
     <div class="grid2">
       <div class="card" style="grid-column:1/-1"><h3>이번 달 목표</h3><div id="homeGoals"></div></div>
-      <div class="card" style="grid-column:1/-1"><h3>오늘 할 일</h3>
+      <div class="card" style="grid-column:1/-1">
+        <div class="row" style="margin-bottom:10px"><h3 class="grow" style="margin:0">오늘 할 일</h3><input type="date" id="taskDate" aria-label="할 일 날짜" style="width:auto;padding:6px 8px;font-size:14px"></div>
         <div class="row" style="margin-bottom:6px">
           <input id="taskInput" class="grow" style="flex:1;min-width:0" placeholder="할 일 적기" onkeydown="if(event.key==='Enter'&&!event.isComposing)addTask()">
           <button class="btn" onclick="addTask()" aria-label="할 일 추가">＋</button></div>
-        <div class="row" style="margin-bottom:4px"><label style="margin:0">날짜</label><input type="date" id="taskDate" style="width:auto;padding:6px 8px;font-size:14px"><span class="muted grow" id="taskLater"></span></div>
+        <div class="muted" id="taskLater" style="margin-bottom:4px"></div>
         <ul class="list" id="taskList"></ul>
         <ul class="list" id="todoList"></ul></div>
     </div>
@@ -351,7 +352,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.15-93';
+const APP_VERSION = '2026.10.15-94';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: '관심고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
