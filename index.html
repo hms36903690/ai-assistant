@@ -351,7 +351,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.15-76';
+const APP_VERSION = '2026.10.15-77';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
@@ -1869,16 +1869,16 @@ const PERF_FIELDS = [
   {k: 'type', label: '구분', type: 'select', options: ['신계약', '추가계약', '법인계약'], def: '신계약'},
   {k: 'memo', label: '메모', full: true},
 ];
-// 📊 계약 실적: 이번 달 막대 1개 ('N건 · 금액') — 제목을 누르면 최근 12개월 막대 펼치기, 막대를 누르면 그 달 계약 목록
+// 📊 계약 실적: 이번 달 막대 1개 ('N건 · 금액') — 제목을 누르면 그해 1~12월 막대 펼치기, 막대를 누르면 그 달 계약 목록
 let perfBars = false;
 function renderPerf() {
-  const m = $('fcMonth').value || thisMonth(), d = new Date(m + '-01T00:00'), months = [];
-  for (let i = 11; i >= 0; i--) months.push(ymd(new Date(d.getFullYear(), d.getMonth() - i, 1)).slice(0, 7));
+  const m = $('fcMonth').value || thisMonth(), months = [];
+  for (let i = 1; i <= 12; i++) months.push(m.slice(0, 4) + '-' + String(i).padStart(2, '0'));
   const st = months.map(monthStats), max = Math.max(1, ...st.map(x => x.premium));
   const bar = (mm, x) => `<div class="row" style="font-size:13px;margin-bottom:6px;cursor:pointer" onclick="perfMonthList('${mm}')" title="눌러서 ${+mm.slice(5)}월 계약 보기">
     <span style="width:34px">${+mm.slice(5)}월</span><div class="bar grow" style="flex:1;height:18px"><i style="width:${x.premium / max * 100}%"></i></div>
     <b style="width:92px;text-align:right">${x.contract}건 · ${shortWon(x.premium)}</b></div>`;
-  $('perfHistory').innerHTML = (perfBars ? months.map((mm, i) => (i === 0 || mm.endsWith('-01') ? `<div class="muted" style="font-size:11px;margin:${i ? 8 : 0}px 0 4px">${mm.slice(0, 4)}년</div>` : '') + bar(mm, st[i])).join('') : bar(m, st[11])) +
+  $('perfHistory').innerHTML = (perfBars ? `<div class="muted" style="font-size:11px;margin-bottom:4px">${m.slice(0, 4)}년</div>` + months.map((mm, i) => bar(mm, st[i])).join('') : bar(m, monthStats(m))) +
     `<div class="muted" style="font-size:12px">👉 막대를 누르면 그 달 계약 수정</div>`;
   $('perfToggle').textContent = perfBars ? '접기 ▴' : '12개월 보기 ▾';
 }
