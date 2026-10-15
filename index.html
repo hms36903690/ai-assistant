@@ -351,7 +351,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.15-88';
+const APP_VERSION = '2026.10.15-89';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: '관심고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
@@ -1181,13 +1181,7 @@ function defaultRoutines() {
       text: '좋은 아침입니다 😊\n새로운 한 주가 시작됐네요.\n이번 주도 건강하고 좋은 일만 가득하시길 바랍니다!\n- {이름}'},
     {id: 'r_wed', title: '수요상식 문제', day: 3, time: '13:30',
       text: '[수요상식 퀴즈] 🧠\n\n(이번 주 문제를 여기에 적어 두세요)\n\n정답을 아시면 답장 주세요 😊\n- {이름}'},
-    WED_ANSWER_ROUTINE(),
   ];
-}
-// 수요상식 정답 문자 (같은 수요일 16:00)
-function WED_ANSWER_ROUTINE() {
-  return {id: 'r_wedans', title: '수요상식 정답', day: 3, time: '16:00', library: 'wedAnswer',
-    text: '[수요상식 정답] ✅\n\n오늘 문제의 정답은 (정답)이었어요!\n\n답장 주신 분들 모두 감사합니다 😊\n- {이름}'};
 }
 const nowHM = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
 // 주차별 문구 모음 (monday-messages.json, wednesday-messages.json): 그 주 날짜에 맞는 문구를 자동으로 씁니다
@@ -2226,11 +2220,8 @@ async function syncOff() {
 
 /* ───────── 시작 ───────── */
 cleanTasks();
-// 한 번만: 수요상식 정답 문자(수요일 16:00) 정기 문자 추가
-if (!db.settings.wedAnsV1) {
-  if (!db.routines.some(r => r.id === 'r_wedans')) db.routines.push(WED_ANSWER_ROUTINE());
-  db.settings.wedAnsV1 = true; save();
-}
+// 수요상식 정답은 문제 모음에서 복사해 보내므로 따로 정기 문자·알람 없음 (잠깐 있던 것 정리)
+if (db.routines.some(r => r.id === 'r_wedans')) { db.routines = db.routines.filter(r => r.id !== 'r_wedans'); save(); }
 showPage(location.hash.slice(1) || 'home');
 loadLibs();
 bootSync();
