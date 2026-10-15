@@ -351,7 +351,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.15-69';
+const APP_VERSION = '2026.10.15-70';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
@@ -734,7 +734,7 @@ function renderDailyLog() {
       <input${dis} value="${esc(r.todo || '')}" placeholder="다음 할 일" oninput="dlKeep(${i},'todo',this.value)">
       <input${dis} type="date" value="${esc(r.date || '')}" title="연락 날짜" onchange="dlKeep(${i},'date',this.value)"></div>`).join('')}
     <div class="row">${lock ? '' : `<button class="btn sec sm" onclick="dlUpdate(v=>{v.keep=(v.keep&&v.keep.length?v.keep:[{},{},{}]).concat([{}])});renderDailyLog()">＋ 고객 줄 추가</button>`}
-      <button class="btn sec sm" onclick="dlKeepToTasks()">📅 할 일로 보내기</button></div>
+      <button class="btn sec sm" onclick="dlKeepToTasks()">✅ 오늘 할 일로 보내기</button></div>
     <h4 style="margin:14px 0 6px">3. 오늘 마무리</h4>
     <div class="muted" style="margin-bottom:6px">오늘 계약: <b id="dlContract">${Number(L.counts.contract) || 0}</b>건</div>
     <label>내일 우선 연락할 고객</label><input${dis} list="dlNames" value="${esc(L.tmrCustomer)}" placeholder="고객 이름" oninput="dlUpdate(v=>{v.tmrCustomer=this.value})">
@@ -764,7 +764,7 @@ function dlKeepToTasks() {
   const rows = (dlGet(dlDate).keep || []).filter(r => (r.name || '').trim());
   if (!rows.length) return alert('고객 이름을 먼저 적어 주세요.');
   rows.forEach(r => db.tasks.push({id: uid(), text: `${r.name.trim()}${r.todo ? ' - ' + r.todo.trim() : ''}`, date: r.date || today(), done: false}));
-  save(); toast(`${rows.length}명을 할 일에 넣었어요.`);
+  save(); toast(`${rows.length}명을 오늘 할 일에 넣었어요.`);
 }
 // 저장 · 삭제 · 저장된 날짜 목록
 const dlHasData = L => L && (Object.values(L.counts || {}).some(v => Number(v) > 0) || (L.keep || []).some(r => r.name || r.todo) || L.tmrCustomer || L.tmrTodo);
