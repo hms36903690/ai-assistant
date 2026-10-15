@@ -127,6 +127,20 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 .proj-card textarea{min-height:70px;font-size:14px}
 .proj-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .proj-head input.pname{flex:1;min-width:0;font-weight:800;font-size:16px;border:0;border-bottom:1px dashed var(--line);border-radius:0;padding:4px 2px;background:transparent}
+.final-goal{background:linear-gradient(135deg,#102a43,#243b53);color:#fff;border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:15px;line-height:1.5}
+.final-goal small{color:#fcd34d;font-size:13px}
+.dl-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.dl-row .nm{font-weight:700;font-size:14px}
+.dl-row .tg{font-size:12px;color:var(--sub)}
+.dl-row .wk{font-size:11px;color:var(--sub)}
+.cnt{display:flex;align-items:center;gap:4px}
+.cnt button{width:38px;height:38px;border:1px solid var(--line);background:#fff;border-radius:10px;font-size:18px;font-weight:700}
+.cnt input{width:52px;text-align:center;padding:8px 2px;font-size:17px;font-weight:700}
+.dl-row.ok .nm::after{content:' ✅'}
+.keep-row{display:grid;grid-template-columns:1fr 1.4fr;gap:6px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--line)}
+.keep-row input[type=date]{grid-column:1/-1}
+@media(min-width:700px){.keep-row{grid-template-columns:1fr 1.6fr 170px}.keep-row input[type=date]{grid-column:auto}}
+.keep-row input{font-size:14px;padding:8px}
 .tag.done{background:#dcfce7;color:var(--ok)}
 .tag.s-new{background:#dbeafe;color:#1d4ed8}
 .tag.s-miss{background:#ffedd5;color:var(--warn)}
@@ -182,7 +196,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
   <button data-page="goals">🎯 목표</button>
   <button data-page="perf">📊 실적</button>
   <button data-page="weekly">📝 주간계획</button>
-  <button data-page="money">💰 월 1억 수입 프로젝트</button>
+  <button data-page="money">💰 월 소득 1억원 달성</button>
   <button data-page="studio">🎬 콘텐츠 작업실</button>
   <a class="side-link" href="https://chatgpt.com/" target="_blank" rel="noopener">🤖 ChatGPT ↗</a>
 </nav>
@@ -291,10 +305,12 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
       <button class="btn sec" onclick="pickWeekRowToDelete()">－ 줄 삭제</button></div>
   </section>
 
-  <!-- 💰 월 1억 수입 프로젝트 (삼성생명 소득) -->
+  <!-- 💰 월 소득 1억원 달성 (삼성생명 소득) -->
   <section class="page" id="page-money">
     <div class="toolbar"><input type="month" id="fcMonth" onchange="renderMoney()"><button class="btn" style="white-space:nowrap" onclick="fcIncomeSheet()">＋ 소득 기록</button></div>
+    <div class="final-goal">🏆 나의 최종 목표: <b>월 개인소득 1억 원 달성</b><br><small>매일 기록하고, 매주 확인하고, 꾸준히 성장하기!</small></div>
     <div class="card" id="moneyGoal"></div>
+    <div class="card" id="dailyLogCard"></div>
     <div class="card"><h3>📈 최근 6개월</h3><div id="fcHistory"></div></div>
     <div class="card"><h3>💵 이달 소득 기록</h3><ul class="list" id="incomeAll"></ul></div>
     <div class="card"><h3>📌 월 1억 계획</h3>
@@ -343,13 +359,13 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.15-46';
+const APP_VERSION = '2026.10.15-48';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
-const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적', weekly: '주간계획', money: '월 1억 수입 프로젝트', studio: '콘텐츠 작업실'};
+const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
 
 function defaults() {
-  return {settings: {fcName: '현미숙 FC', signature: '삼성생명 FC 현미숙 드림', lastBackup: '', projGoal: 100000000, fcMonthGoal: 100000000}, customers: [], dbleads: [], prospects: [], ceos: [], goals: {}, perf: [], routines: defaultRoutines(), routineLog: {}, edu: [], tasks: [], weekly: defaultWeekly(), projects: defaultProjects(), projIncome: [], posts: [], fcIncome: [], _sync: {del: {}, keys: {}, settingsAt: 0}};
+  return {settings: {fcName: '현미숙 FC', signature: '삼성생명 FC 현미숙 드림', lastBackup: '', projGoal: 100000000, fcMonthGoal: 100000000}, customers: [], dbleads: [], prospects: [], ceos: [], goals: {}, perf: [], routines: defaultRoutines(), routineLog: {}, edu: [], tasks: [], weekly: defaultWeekly(), projects: defaultProjects(), projIncome: [], posts: [], fcIncome: [], dailyLog: {}, _sync: {del: {}, keys: {}, settingsAt: 0}};
 }
 function load() {
   try {
@@ -361,7 +377,7 @@ function load() {
 let db = load();
 // 동기화를 위해 무엇이 언제 바뀌었는지 기록합니다 (항목마다 _u = 고친 시각, 지운 항목은 _sync.del)
 const COLLS = ['customers', 'dbleads', 'prospects', 'ceos', 'perf', 'edu', 'tasks', 'routines', 'projIncome', 'posts', 'fcIncome'];
-const MAPS = ['goals', 'routineLog', 'weekly', 'projects'];
+const MAPS = ['goals', 'routineLog', 'weekly', 'projects', 'dailyLog'];
 const clone = o => JSON.parse(JSON.stringify(o));
 const bare = r => { const {_u, ...rest} = r; return JSON.stringify(rest); };
 let lastSnap = clone(db);
@@ -650,7 +666,7 @@ function renderPlanCard() {
       : '<div class="muted">오늘 계획이 비어 있어요. 주간계획에서 적어 보세요.</div>'}`;
 }
 
-/* ───────── 💰 월 1억 수입 프로젝트 / 🎬 콘텐츠 작업실 ─────────
+/* ───────── 💰 월 소득 1억원 달성 / 🎬 콘텐츠 작업실 ─────────
    유튜브·전자책·블로그 같은 부업 프로젝트를 모아 두고, 수익을 기록해 1억 목표까지 얼마나 왔는지 보여 줍니다. */
 function defaultProjects() {
   const list = [['🎵', '유튜브 AI 플레이리스트'], ['📘', '전자책'], ['📜', '유튜브 AI 역사'], ['✍️', '티스토리 블로그']];
@@ -668,7 +684,7 @@ const MORE_PAGES = ['weekly', 'money', 'studio'];
 // 핸드폰 아래 탭 '더보기'
 function openMore() {
   const item = (pg, icon, label) => `<button class="btn sec" style="width:100%;margin-bottom:8px;text-align:left;font-size:16px" onclick="closeSheet();location.hash='${pg}'">${icon} ${label}</button>`;
-  openSheet('더보기', item('weekly', '📝', '주간계획') + item('money', '💰', '월 1억 수입 프로젝트') + item('studio', '🎬', '콘텐츠 작업실') +
+  openSheet('더보기', item('weekly', '📝', '주간계획') + item('money', '💰', '월 소득 1억원 달성') + item('studio', '🎬', '콘텐츠 작업실') +
     '<a class="btn" href="https://chatgpt.com/" target="_blank" rel="noopener" style="display:block;text-decoration:none;background:#10a37f;font-size:16px">🤖 ChatGPT 열기 ↗</a>');
 }
 const projName = pid => pid && db.projects[pid] ? `${db.projects[pid].emoji || '⭐'} ${db.projects[pid].name}` : '기타';
@@ -676,7 +692,94 @@ const projName = pid => pid && db.projects[pid] ? `${db.projects[pid].emoji || '
 const FC_KIND = ['수수료', '시책·보너스', '기타'];
 const monthSumFc = m => db.fcIncome.filter(x => (x.date || '').startsWith(m)).reduce((n, x) => n + (Number(x.amount) || 0), 0);
 const shortWon = n => n >= 100000000 ? (n / 100000000).toFixed(n % 100000000 ? 1 : 0) + '억' : n >= 10000 ? Math.round(n / 10000).toLocaleString('ko-KR') + '만' : (n || 0).toLocaleString('ko-KR');
+/* ── 📝 하루 실적 기록표 (월 소득 1억원 달성) ── */
+const DAILY_ITEMS = [
+  ['contact', '고객 연락', '10~15명', 10, '명'],
+  ['appt', '상담 약속', '2~3건', 2, '건'],
+  ['meet', '고객 상담', '2명', 2, '명'],
+  ['analysis', '보장분석', '1~2건', 1, '건'],
+  ['propose', '상품 제안', '1~2건', 1, '건'],
+  ['contract', '계약', '매일 도전', 1, '건'],
+  ['follow', '후속관리', '3~5명', 3, '명'],
+  ['refAsk', '소개 요청', '1~2명', 1, '명'],
+  ['referral', '소개 고객', '1명 이상 도전', 1, '명'],
+  ['ceo', 'CEO·법인대표 접촉', '1~2명', 1, '명'],
+];
+let dlDate = '';
+const dlGet = d => db.dailyLog[d] || {counts: {}, premium: '', keep: [], tmrCustomer: '', tmrTodo: ''};
+function dlUpdate(fn) { const d = dlDate; const v = clone(dlGet(d)); fn(v); db.dailyLog[d] = v; projSaveSoon(); }
+// 선택한 날이 속한 주(월~일)의 날짜들
+function weekDates(d) {
+  const x = new Date(d + 'T00:00'), mon = new Date(x); mon.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+  return Array.from({length: 7}, (_, i) => { const y = new Date(mon); y.setDate(mon.getDate() + i); return ymd(y); });
+}
+function renderDailyLog() {
+  if (!dlDate) dlDate = today();
+  const L = dlGet(dlDate), wk = weekDates(dlDate);
+  const wsum = k => wk.reduce((n, d) => n + (Number(((db.dailyLog[d] || {}).counts || {})[k]) || 0), 0);
+  const done = DAILY_ITEMS.filter(([k, , , min]) => (Number(L.counts[k]) || 0) >= min).length;
+  const keep = (L.keep && L.keep.length ? L.keep : [{}, {}, {}]);
+  $('dailyLogCard').innerHTML = `
+    <div class="row" style="margin-bottom:6px"><h3 class="grow" style="margin:0">📝 하루 실적 기록표</h3>
+      <input type="date" value="${dlDate}" style="width:auto;padding:6px 8px;font-size:14px" onchange="dlDate=this.value||today();renderDailyLog()"></div>
+    <div class="muted" style="margin-bottom:6px">${dlDate === today() ? '오늘' : dlDate.slice(5).replace('-', '/') + '(' + WEEK(dlDate) + ')'} 달성 <b id="dlScore">${done}</b> / ${DAILY_ITEMS.length}개 · 아래 작은 글씨는 이번 주 합계</div>
+    <h4 style="margin:10px 0 0">1. 오늘의 목표와 실적</h4>
+    ${DAILY_ITEMS.map(([k, name, goal, min, unit]) => { const v = Number(L.counts[k]) || 0; return `<div class="dl-row${v >= min ? ' ok' : ''}" id="dl-${k}">
+      <div><div class="nm">${name}</div><div class="tg">목표 ${goal} <span class="wk">· 이번 주 ${wsum(k)}${unit}</span></div></div>
+      <div class="cnt"><button onclick="dlStep('${k}',-1)" aria-label="${name} 빼기">−</button>
+        <input type="number" inputmode="numeric" min="0" value="${v}" oninput="dlSet('${k}',this.value)" aria-label="${name} 실적">
+        <button onclick="dlStep('${k}',1)" aria-label="${name} 더하기">＋</button></div></div>`; }).join('')}
+    <div class="dl-row"><div><div class="nm">계약 월납 보험료</div><div class="tg">오늘 계약한 보험료 합계</div></div>
+      <input type="number" inputmode="numeric" style="width:150px;text-align:right" value="${esc(L.premium)}" placeholder="원" oninput="dlUpdate(v=>{v.premium=this.value})"></div>
+    <h4 style="margin:14px 0 6px">2. 꼭 챙길 고객</h4>
+    <datalist id="dlNames">${[...db.customers, ...db.dbleads, ...db.prospects].map(c => `<option value="${esc(c.name)}">`).join('')}${db.ceos.map(c => `<option value="${esc(c.company)}">`).join('')}</datalist>
+    ${keep.map((r, i) => `<div class="keep-row">
+      <input list="dlNames" value="${esc(r.name || '')}" placeholder="고객 이름" oninput="dlKeep(${i},'name',this.value)">
+      <input value="${esc(r.todo || '')}" placeholder="다음 할 일" oninput="dlKeep(${i},'todo',this.value)">
+      <input type="date" value="${esc(r.date || '')}" title="연락 날짜" onchange="dlKeep(${i},'date',this.value)"></div>`).join('')}
+    <div class="row"><button class="btn sec sm" onclick="dlUpdate(v=>{v.keep=(v.keep&&v.keep.length?v.keep:[{},{},{}]).concat([{}])});renderDailyLog()">＋ 고객 줄 추가</button>
+      <button class="btn sec sm" onclick="dlKeepToTasks()">📅 할 일로 보내기</button></div>
+    <h4 style="margin:14px 0 6px">3. 오늘 마무리</h4>
+    <div class="muted" style="margin-bottom:6px">오늘 계약: <b id="dlContract">${Number(L.counts.contract) || 0}</b>건</div>
+    <label>내일 우선 연락할 고객</label><input list="dlNames" value="${esc(L.tmrCustomer)}" placeholder="고객 이름" oninput="dlUpdate(v=>{v.tmrCustomer=this.value})">
+    <label style="margin-top:8px">내일 할 일 한 가지</label><input value="${esc(L.tmrTodo)}" placeholder="내일 꼭 할 한 가지" oninput="dlUpdate(v=>{v.tmrTodo=this.value})">
+    <button class="btn" style="width:100%;margin-top:10px" onclick="dlTomorrow()">✓ 오늘 마무리 · 내일 할 일에 넣기</button>`;
+}
+function dlSet(k, val) {
+  const n = Math.max(0, Number(val) || 0);
+  dlUpdate(v => { v.counts = {...v.counts, [k]: n}; });
+  const it = DAILY_ITEMS.find(x => x[0] === k), row = $('dl-' + k);
+  if (row) row.classList.toggle('ok', n >= it[3]);
+  const L = dlGet(dlDate);
+  $('dlScore').textContent = DAILY_ITEMS.filter(([kk, , , min]) => (Number(L.counts[kk]) || 0) >= min).length;
+  if (k === 'contract') $('dlContract').textContent = n;
+  const wkEl = document.querySelector(`#dl-${k} .wk`);
+  if (wkEl) wkEl.textContent = `· 이번 주 ${weekDates(dlDate).reduce((t, d) => t + (Number(((db.dailyLog[d] || {}).counts || {})[k]) || 0), 0)}${it[4]}`;
+}
+function dlStep(k, d) {
+  const n = Math.max(0, (Number(dlGet(dlDate).counts[k]) || 0) + d);
+  dlSet(k, n); const inp = document.querySelector(`#dl-${k} input`); if (inp) inp.value = n;
+}
+function dlKeep(i, field, val) {
+  dlUpdate(v => { v.keep = (v.keep && v.keep.length ? v.keep : [{}, {}, {}]).map((r, j) => j === i ? {...r, [field]: val} : r); });
+}
+// 꼭 챙길 고객 → 오늘 할 일 목록으로 (날짜가 있으면 그날로)
+function dlKeepToTasks() {
+  const rows = (dlGet(dlDate).keep || []).filter(r => (r.name || '').trim());
+  if (!rows.length) return alert('고객 이름을 먼저 적어 주세요.');
+  rows.forEach(r => db.tasks.push({id: uid(), text: `${r.name.trim()}${r.todo ? ' - ' + r.todo.trim() : ''}`, date: r.date || today(), done: false}));
+  save(); toast(`${rows.length}명을 할 일에 넣었어요.`);
+}
+function dlTomorrow() {
+  const L = dlGet(dlDate), t = new Date(dlDate + 'T00:00'); t.setDate(t.getDate() + 1); const tm = ymd(t);
+  let n = 0;
+  if ((L.tmrCustomer || '').trim()) { db.tasks.push({id: uid(), text: `📞 ${L.tmrCustomer.trim()} 우선 연락`, date: tm, done: false}); n++; }
+  if ((L.tmrTodo || '').trim()) { db.tasks.push({id: uid(), text: `⭐ ${L.tmrTodo.trim()}`, date: tm, done: false}); n++; }
+  save();
+  toast(n ? `수고하셨어요! 내일 할 일 ${n}개를 넣었어요 👍` : '수고하셨어요! 오늘 기록을 저장했어요 👍');
+}
 function renderMoney() {
+  renderDailyLog();
   if (!$('fcMonth').value) $('fcMonth').value = thisMonth();
   const m = $('fcMonth').value, goal = Number(db.settings.fcMonthGoal) || 100000000;
   const sum = monthSumFc(m), pct = Math.min(100, sum / goal * 100);
@@ -699,7 +802,7 @@ function renderMoney() {
     <span class="txt">${won(x.amount)} <span class="muted">· ${esc(x.kind || '수수료')}${x.memo ? ' · ' + esc(x.memo) : ''}</span></span>
     <button class="btn sec sm" onclick="delFcIncome('${x.id}')" aria-label="삭제">✕</button></li>`).join('') || '<li class="empty">이 달 기록이 없어요. 위의 ＋ 소득 기록을 눌러 적어 보세요.</li>';
 }
-const MONEY_PLAN = "📋 월 1억 수입 계획표 (삼성생명)\n(월 1억 = 한 달에 1억, 1년 12억 / 숫자는 예시라 지점에서 확인한 숫자로 바꾸기)\n\n━━━━━━━━━━━━━━━━\n0️⃣ 가장 먼저 할 일 (이번 주)\n☐ 1. 지난 6개월 월별 소득·계약 건수·평균 월납 보험료 적기 (위 소득 기록에 입력)\n☐ 2. 지점장·매니저에게 수수료 구조(초년도·유지 수수료, 시책) 묻고 \"월 1억 = 신계약 월납 얼마\"인지 계산\n☐ 3. 지금 고객 중 VIP·CEO 후보 30명 뽑기 (⭐ 관심고객 표시)\n☐ 4. 월 1억 버는 선배 1명 만나서 하루 일과·주력 시장 묻기\n\n※ 역산 공식: 월 1억 = (신계약 월납 보험료 × 수수료율) + 유지 수수료 + 시책\n→ 우리 회사 수수료율 넣기: ______ → 매달 필요한 신계약 월납: ______\n\n━━━━━━━━━━━━━━━━\n1️⃣ 단계별 로드맵\n■ 1단계 기초 다지기 (1~3개월) / 월 소득 목표: 지금 × 1.5배\n - 숫자로 일하기: 매일 활동량 기록\n - 기존 고객 보장 점검 전수 실시\n - 소개 요청 습관 만들기\n\n■ 2단계 고액 시장 진입 (4~6개월) / 목표: 지금 × 2~3배\n - CEO·VIP 집중\n - 법인 리스크(가업승계·퇴직금·대표 보장) 공부\n - 세무사·노무사 협업 관계 만들기, CEO 모임 참여\n\n■ 3단계 소개 시스템 (7~12개월) / 목표: 한 달 5천만 이상\n - 계약 고객마다 소개 2명 받기\n - VIP 고객 연 2회 감사 모임\n - 유지율 관리\n\n■ 4단계 월 1억 안정화 (2년차) / 목표: 한 달 1억\n - 법인·자산가 연간 플랜 관리\n - 큰 계약 + 꾸준한 유지 수수료\n - 콘텐츠(유튜브·블로그)로 신뢰 쌓기\n\n━━━━━━━━━━━━━━━━\n2️⃣ 매일 활동 목표 (예시)\n - 📞 연락(DB·가망·기존 고객): 하루 20명 / 한 달 400명\n - 🤝 새 상담: 하루 2명 / 한 달 40명\n - 📄 제안서: 하루 1건 / 한 달 20건\n - ✍️ 계약: 한 달 8~10건 (고액 위주)\n - 🙏 소개 요청: 하루 1명 / 한 달 20명\n - 📚 공부(법인·세무·상속): 하루 30분\n\n━━━━━━━━━━━━━━━━\n3️⃣ 한 주 보험 일정\n 월: 주간 목표 세우기 · 인사문자 · DB 연락 20명\n 화: CEO 방문(법인 2곳) · 세무사 협업 미팅\n 수: 수요상식 발송 · VIP 상담 · DB 연락 20명\n 목: CEO 방문(법인 2곳) · 신규 상담 2건\n 금: 제안서 정리 · 계약 마무리 · 계약 고객 감사 연락\n 토: 소개 고객 만남 · 한 주 돌아보기 · 공부 1시간\n\n━━━━━━━━━━━━━━━━\n4️⃣ 집중할 고객 시장\n 🏢 CEO·법인: 계약이 크고 오래감 → CEO 고객 10곳 등록, 관심 이슈 체크\n 💎 VIP·자산가: 상속·증여·노후 → 보장 점검에서 자산 설계로 넓히기\n 👨‍👩‍👧 기존 고객 가족: 신뢰가 있어 소개 쉬움 → 가족 보장 점검 제안\n 📺 콘텐츠: 유튜브·블로그 보고 먼저 연락 → 보험 상식 글 주 1편\n\n━━━━━━━━━━━━━━━━\n5️⃣ 꼭 지킬 원칙\n - 완전판매: 필요한 만큼만, 과장 없이 → 오래가는 신뢰가 큰 소득\n - 유지율: 월요 인사·수요상식·생일 문자 꾸준히\n - 숫자 기록: 매일 활동, 매달 소득을 앱에 적기";
+const MONEY_PLAN = "📋 월 소득 1억원 달성 계획표 (삼성생명)\n(월 1억 = 한 달에 1억, 1년 12억 / 숫자는 예시라 지점에서 확인한 숫자로 바꾸기)\n\n━━━━━━━━━━━━━━━━\n0️⃣ 가장 먼저 할 일 (이번 주)\n☐ 1. 지난 6개월 월별 소득·계약 건수·평균 월납 보험료 적기 (위 소득 기록에 입력)\n☐ 2. 지점장·매니저에게 수수료 구조(초년도·유지 수수료, 시책) 묻고 \"월 1억 = 신계약 월납 얼마\"인지 계산\n☐ 3. 지금 고객 중 VIP·CEO 후보 30명 뽑기 (⭐ 관심고객 표시)\n☐ 4. 월 1억 버는 선배 1명 만나서 하루 일과·주력 시장 묻기\n\n※ 역산 공식: 월 1억 = (신계약 월납 보험료 × 수수료율) + 유지 수수료 + 시책\n→ 우리 회사 수수료율 넣기: ______ → 매달 필요한 신계약 월납: ______\n\n━━━━━━━━━━━━━━━━\n1️⃣ 단계별 로드맵\n■ 1단계 기초 다지기 (1~3개월) / 월 소득 목표: 지금 × 1.5배\n - 숫자로 일하기: 매일 활동량 기록\n - 기존 고객 보장 점검 전수 실시\n - 소개 요청 습관 만들기\n\n■ 2단계 고액 시장 진입 (4~6개월) / 목표: 지금 × 2~3배\n - CEO·VIP 집중\n - 법인 리스크(가업승계·퇴직금·대표 보장) 공부\n - 세무사·노무사 협업 관계 만들기, CEO 모임 참여\n\n■ 3단계 소개 시스템 (7~12개월) / 목표: 한 달 5천만 이상\n - 계약 고객마다 소개 2명 받기\n - VIP 고객 연 2회 감사 모임\n - 유지율 관리\n\n■ 4단계 월 1억 안정화 (2년차) / 목표: 한 달 1억\n - 법인·자산가 연간 플랜 관리\n - 큰 계약 + 꾸준한 유지 수수료\n - 콘텐츠(유튜브·블로그)로 신뢰 쌓기\n\n━━━━━━━━━━━━━━━━\n2️⃣ 매일 활동 목표 (예시)\n - 📞 연락(DB·가망·기존 고객): 하루 20명 / 한 달 400명\n - 🤝 새 상담: 하루 2명 / 한 달 40명\n - 📄 제안서: 하루 1건 / 한 달 20건\n - ✍️ 계약: 한 달 8~10건 (고액 위주)\n - 🙏 소개 요청: 하루 1명 / 한 달 20명\n - 📚 공부(법인·세무·상속): 하루 30분\n\n━━━━━━━━━━━━━━━━\n3️⃣ 한 주 보험 일정\n 월: 주간 목표 세우기 · 인사문자 · DB 연락 20명\n 화: CEO 방문(법인 2곳) · 세무사 협업 미팅\n 수: 수요상식 발송 · VIP 상담 · DB 연락 20명\n 목: CEO 방문(법인 2곳) · 신규 상담 2건\n 금: 제안서 정리 · 계약 마무리 · 계약 고객 감사 연락\n 토: 소개 고객 만남 · 한 주 돌아보기 · 공부 1시간\n\n━━━━━━━━━━━━━━━━\n4️⃣ 집중할 고객 시장\n 🏢 CEO·법인: 계약이 크고 오래감 → CEO 고객 10곳 등록, 관심 이슈 체크\n 💎 VIP·자산가: 상속·증여·노후 → 보장 점검에서 자산 설계로 넓히기\n 👨‍👩‍👧 기존 고객 가족: 신뢰가 있어 소개 쉬움 → 가족 보장 점검 제안\n 📺 콘텐츠: 유튜브·블로그 보고 먼저 연락 → 보험 상식 글 주 1편\n\n━━━━━━━━━━━━━━━━\n5️⃣ 꼭 지킬 원칙\n - 완전판매: 필요한 만큼만, 과장 없이 → 오래가는 신뢰가 큰 소득\n - 유지율: 월요 인사·수요상식·생일 문자 꾸준히\n - 숫자 기록: 매일 활동, 매달 소득을 앱에 적기";
 function fitPlan() { const t = $('moneyPlan'); t.style.height = 'auto'; t.style.height = Math.max(110, t.scrollHeight + 4) + 'px'; }
 function loadPlanTemplate() {
   if (db.settings.moneyPlan && db.settings.moneyPlan !== MONEY_PLAN && !confirm('지금 적어 둔 계획을 지우고 월 1억 계획표로 바꿀까요?')) return;
