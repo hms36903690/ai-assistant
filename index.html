@@ -70,6 +70,14 @@ input,select,textarea{width:100%;border:1px solid var(--line);background:#fff;bo
 textarea{min-height:90px;resize:vertical}
 label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 .formgrid{display:grid;grid-template-columns:1fr;gap:10px}
+.goal-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.goal-tile{background:#f3f4f6;border-radius:14px;padding:12px 14px}
+.goal-tile .gt-lbl{color:#4b5563;font-size:14px}
+.goal-tile .gt-num{display:flex;align-items:baseline;gap:2px;margin:4px 0 2px;color:#0f6e8c}
+.goal-tile .gt-num input{border:0;border-bottom:2px dashed #cbd5e1;border-radius:0;background:transparent;padding:0;min-width:2ch;max-width:100%;font-size:26px;font-weight:800;color:#0f6e8c}
+.goal-tile .gt-num input:focus{outline:none;border-bottom-color:#0f6e8c}
+.goal-tile .gt-num span{font-size:20px;font-weight:800;white-space:nowrap}
+.goal-tile .gt-hint{color:#4b5563;font-size:13px;min-height:18px}
 .formgrid .full{grid-column:1/-1}
 .checks{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .checks label{display:flex;gap:6px;align-items:center;color:var(--ink);font-size:14px;background:var(--soft);border-radius:8px;padding:8px}
@@ -294,7 +302,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
       <div class="card"><h3>진행 현황</h3><div id="goalProgress"></div></div>
       <div class="card">
         <h3>목표 설정</h3>
-        <div class="formgrid" id="goalForm"></div>
+        <div class="goal-tiles" id="goalForm"></div>
         <div class="row" style="margin-top:12px"><button class="btn grow" onclick="saveGoals()">목표 저장</button></div>
       </div>
     </div>
@@ -352,7 +360,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.15-95';
+const APP_VERSION = '2026.10.15-96';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: '관심고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
@@ -1881,11 +1889,35 @@ function showCeo(id) {
 
 /* ───────── 목표 ───────── */
 const GOAL_FIELDS = [
-  {k: 'newCust', label: '신규 고객 (명)', type: 'number'},
-  {k: 'consult', label: '상담 (건)', type: 'number'},
-  {k: 'contract', label: '계약 (건)', type: 'number'},
-  {k: 'premium', label: '월 보험료 합계 (원)', type: 'number'},
+  {k: 'newCust', label: '신규 고객 (명)', type: 'number', unit: '명'},
+  {k: 'consult', label: '실제 상담 (건)', type: 'number', unit: '건'},
+  {k: 'contract', label: '계약 (건)', type: 'number', unit: '건'},
+  {k: 'premium', label: '월 보험료 합계 (원)', type: 'number', unit: '만원', scale: 10000},
 ];
+// 목표를 아직 안 정한 달에 미리 채워 두는 추천 목표 (하루 2명·2건, 상담 대비 30%, 계약당 25만 원)
+const GOAL_DEFAULT = {newCust: 40, consult: 40, contract: 12, premium: 3000000};
+// 목표 칸 아래 작은 설명 (숫자를 바꾸면 바로 다시 계산)
+function goalHint(k, g) {
+  const n = k => Number(g[k]) || 0, day = v => +(v / 20).toFixed(1);
+  if (k === 'newCust') return n('newCust') ? `하루 ${day(n('newCust'))}명 × 20일` : '';
+  if (k === 'consult') return n('consult') ? `하루 ${day(n('consult'))}건` : '';
+  if (k === 'contract') return n('contract') && n('consult') ? `상담 대비 ${Math.round(n('contract') / n('consult') * 100)}%` : '';
+  if (k === 'premium') return n('premium') && n('contract') ? `계약당 평균 ${shortWon(Math.round(n('premium') / n('contract')))}원` : '';
+}
+function goalTiles(g) {
+  return GOAL_FIELDS.map(f => {
+    const v = Number(g[f.k]) || 0, shown = v ? +(v / (f.scale || 1)).toFixed(1) : '';
+    return `<div class="goal-tile"><div class="gt-lbl">${f.label.replace(/ \(.*\)/, '')}</div>
+      <div class="gt-num"><input id="f_${f.k}" type="text" inputmode="numeric" value="${shown}" placeholder="0" style="width:${Math.max(2, String(shown).length + 0.6)}ch" oninput="this.value=this.value.replace(/[^\\d.]/g,'');this.style.width=Math.max(2,this.value.length+0.6)+'ch';goalTileHints()"><span>${f.unit}</span></div>
+      <div class="gt-hint" id="gh_${f.k}">${goalHint(f.k, g)}</div></div>`;
+  }).join('');
+}
+// 목표 칸에 적힌 숫자 읽기 (보험료는 만원 단위로 적고 원으로 저장)
+const goalTileValues = () => Object.fromEntries(GOAL_FIELDS.map(f => [f.k, Math.round((parseFloat($('f_' + f.k).value) || 0) * (f.scale || 1))]));
+function goalTileHints() {
+  const g = goalTileValues();
+  GOAL_FIELDS.forEach(f => { $('gh_' + f.k).textContent = goalHint(f.k, g); });
+}
 function goalBars(m, onGoalsPage) {
   const g = db.goals[m] || {}, s = monthStats(m);
   const rows = GOAL_FIELDS.filter(f => Number(g[f.k]) > 0);
@@ -1901,11 +1933,12 @@ function renderGoals() {
   if (!$('goalMonth').value) $('goalMonth').value = thisMonth();
   const m = $('goalMonth').value;
   $('goalProgress').innerHTML = goalBars(m, true) + '<p class="muted" style="margin:0">실적은 고객 등록일, 상담 기록, 실적 입력에서 자동으로 계산됩니다.</p>';
-  $('goalForm').innerHTML = formHtml(GOAL_FIELDS, db.goals[m] || {}).replace(/^<div class="formgrid">|<\/div>$/g, '');
+  const g = db.goals[m] && GOAL_FIELDS.some(f => Number(db.goals[m][f.k]) > 0) ? db.goals[m] : GOAL_DEFAULT;
+  $('goalForm').innerHTML = goalTiles(g) + (g === GOAL_DEFAULT ? '<p class="muted full" style="margin:0;grid-column:1/-1;font-size:12px">추천 목표가 채워져 있어요. 숫자를 고치고 <b>목표 저장</b>을 눌러 주세요.</p>' : '');
 }
 function saveGoals() {
   const m = $('goalMonth').value || thisMonth();
-  db.goals[m] = readForm(GOAL_FIELDS);
+  db.goals[m] = goalTileValues();
   save(); renderGoals(); toast('목표를 저장했습니다.');
 }
 
