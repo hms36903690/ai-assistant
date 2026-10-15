@@ -357,7 +357,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.15-60';
+const APP_VERSION = '2026.10.15-61';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
@@ -721,7 +721,8 @@ function renderDailyLog() {
   const lock = false, dis = ''; // 잠금 없이 언제든 고치고 자동 저장
   $('dailyLogCard').innerHTML = `
     <div class="row" style="margin-bottom:6px"><h3 class="grow" style="margin:0">📝 하루 실적 기록표</h3>
-      <input type="date" value="${dlDate}" style="width:auto;padding:6px 8px;font-size:14px" onchange="if(this.value&&this.value!==dlDate)dlGo(this.value)"></div>
+      <input type="date" value="${dlDate}" style="width:auto;padding:6px 8px;font-size:14px" onchange="if(this.value&&this.value!==dlDate)dlGo(this.value)">
+      <button class="btn sm" style="background:var(--ok);white-space:nowrap" onclick="dlSave()">💾 저장</button></div>
     ${dlDate < today() && !dlHasData(db.dailyLog[dlDate]) ? `<div class="notice" style="background:#f1f5f9;border-color:#e2e8f0;color:#475569">${dlDate.slice(5).replace('-', '/')}(${WEEK(dlDate)})에는 기록이 없어요. 지금 적어도 됩니다.</div>` : ''}
     ${lock ? '<div class="notice" style="background:#ecfdf5;border-color:#a7f3d0;color:#065f46">✅ 저장된 기록입니다. 고치려면 맨 아래 <b>✏️ 수정</b>을 누르세요.</div>' : ''}
     <div class="muted" style="margin-bottom:6px">${dlDate === today() ? '오늘' : dlDate.slice(5).replace('-', '/') + '(' + WEEK(dlDate) + ')'} 달성 <b id="dlScore">${done}</b> / ${DAILY_ITEMS.length}개 · 아래 작은 글씨는 이번 주 합계</div>
@@ -796,7 +797,7 @@ function dlFlush() { clearTimeout(projTimer); if (db.dailyLog[dlDate]) save(); }
 // 💾 저장: 1·2·3번을 한꺼번에 저장하고 잠금
 function dlSave() {
   clearTimeout(projTimer); db.dailyLog[dlDate] = {...clone(dlGet(dlDate)), saved: true}; save();
-  dlEditing = false; renderDailyLog(); toast(`${dlDate.slice(5).replace('-', '/')}(${WEEK(dlDate)}) 1·2·3번을 모두 저장했어요 💾`);
+  dlEditing = false; renderDailyLog(); toast(`${dlDate.slice(5).replace('-', '/')}(${WEEK(dlDate)}) 기록을 저장했어요 💾`);
 }
 function dlDelete(d) {
   if (!db.dailyLog[d]) return toast('이 날은 저장된 기록이 없어요.');
