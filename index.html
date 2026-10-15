@@ -183,6 +183,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
   <button data-page="perf">📊 실적</button>
   <button data-page="weekly">📝 주간계획</button>
   <button data-page="money">💰 1억 프로젝트</button>
+  <button data-page="studio">🎬 콘텐츠 작업실</button>
   <a class="side-link" href="https://chatgpt.com/" target="_blank" rel="noopener">🤖 ChatGPT ↗</a>
 </nav>
 
@@ -294,8 +295,16 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
   <section class="page" id="page-money">
     <div class="card" id="moneyGoal"></div>
     <a class="btn" href="https://chatgpt.com/" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-bottom:12px;background:#10a37f">🤖 ChatGPT 열기</a>
+    <div class="card"><h3>📌 1억 만들기 계획</h3>
+      <textarea id="moneyPlan" style="min-height:110px" placeholder="목표 기간, 달마다 얼마씩, 어떤 순서로 할지 적어 두세요" oninput="db.settings.moneyPlan=this.value;projSaveSoon()"></textarea></div>
+    <div class="card"><div class="row" style="margin-bottom:6px"><h3 class="grow" style="margin:0">💵 수익 기록</h3><button class="btn sm" onclick="incomeSheet()">＋ 기록</button></div>
+      <ul class="list" id="incomeAll"></ul></div>
+  </section>
+
+  <!-- 🎬 콘텐츠 작업실 (유튜브·전자책·블로그) -->
+  <section class="page" id="page-studio">
     <div id="projList"></div>
-    <button class="btn sec" style="width:100%" onclick="addProject()">＋ 프로젝트 추가</button>
+    <button class="btn sec" style="width:100%" onclick="addProject()">＋ 작업 추가</button>
   </section>
 
   <!-- 실적 -->
@@ -317,8 +326,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
   <button data-page="ceo"><span>🏢</span>CEO</button>
   <button data-page="goals"><span>🎯</span>목표</button>
   <button data-page="perf"><span>📊</span>실적</button>
-  <button data-page="weekly"><span>📝</span>계획</button>
-  <button data-page="money"><span>💰</span>1억</button>
+  <button id="moreBtn" onclick="openMore()"><span>☰</span>더보기</button>
 </nav>
 
 <div class="sheet-bg" id="sheetBg" onclick="if(event.target===this)closeSheet()">
@@ -333,13 +341,13 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.15-41';
+const APP_VERSION = '2026.10.15-43';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
-const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적', weekly: '주간계획', money: '1억 만들기 프로젝트'};
+const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적', weekly: '주간계획', money: '1억 만들기 프로젝트', studio: '콘텐츠 작업실'};
 
 function defaults() {
-  return {settings: {fcName: '현미숙 FC', signature: '삼성생명 FC 현미숙 드림', lastBackup: '', projGoal: 100000000}, customers: [], dbleads: [], prospects: [], ceos: [], goals: {}, perf: [], routines: defaultRoutines(), routineLog: {}, edu: [], tasks: [], weekly: defaultWeekly(), projects: defaultProjects(), projIncome: [], _sync: {del: {}, keys: {}, settingsAt: 0}};
+  return {settings: {fcName: '현미숙 FC', signature: '삼성생명 FC 현미숙 드림', lastBackup: '', projGoal: 100000000}, customers: [], dbleads: [], prospects: [], ceos: [], goals: {}, perf: [], routines: defaultRoutines(), routineLog: {}, edu: [], tasks: [], weekly: defaultWeekly(), projects: defaultProjects(), projIncome: [], posts: [], _sync: {del: {}, keys: {}, settingsAt: 0}};
 }
 function load() {
   try {
@@ -350,7 +358,7 @@ function load() {
 }
 let db = load();
 // 동기화를 위해 무엇이 언제 바뀌었는지 기록합니다 (항목마다 _u = 고친 시각, 지운 항목은 _sync.del)
-const COLLS = ['customers', 'dbleads', 'prospects', 'ceos', 'perf', 'edu', 'tasks', 'routines', 'projIncome'];
+const COLLS = ['customers', 'dbleads', 'prospects', 'ceos', 'perf', 'edu', 'tasks', 'routines', 'projIncome', 'posts'];
 const MAPS = ['goals', 'routineLog', 'weekly', 'projects'];
 const clone = o => JSON.parse(JSON.stringify(o));
 const bare = r => { const {_u, ...rest} = r; return JSON.stringify(rest); };
@@ -432,6 +440,7 @@ function showPage(id) {
   if (!PAGES[id]) id = 'home';
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + id));
   document.querySelectorAll('[data-page]').forEach(b => b.classList.toggle('active', b.dataset.page === id));
+  $('moreBtn').classList.toggle('active', MORE_PAGES.includes(id));
   $('pageTitle').textContent = PAGES[id];
   render(id);
   window.scrollTo(0, 0);
@@ -443,7 +452,7 @@ document.querySelectorAll('[data-page]').forEach(b => b.addEventListener('click'
 window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
 
 function render(id) {
-  ({home: renderHome, customers: renderCustomers, dbleads: renderDb, prospects: renderProspects, ceo: renderCeos, goals: renderGoals, perf: renderPerf, weekly: renderWeekly, money: renderMoney})[id]();
+  ({home: renderHome, customers: renderCustomers, dbleads: renderDb, prospects: renderProspects, ceo: renderCeos, goals: renderGoals, perf: renderPerf, weekly: renderWeekly, money: renderMoney, studio: renderStudio})[id]();
 }
 function refresh() { render(location.hash.slice(1) in PAGES ? location.hash.slice(1) : 'home'); }
 
@@ -453,7 +462,8 @@ function openSheet(title, html) {
   $('sheetBg').classList.add('open'); document.body.style.overflow = 'hidden';
 }
 const sheetOpen = () => $('sheetBg').classList.contains('open');
-function closeSheet() { $('sheetBg').classList.remove('open'); document.body.style.overflow = ''; }
+function closeSheet() {
+  if (location.hash === '#studio' && $('page-studio').classList.contains('active')) setTimeout(renderStudio, 0); $('sheetBg').classList.remove('open'); document.body.style.overflow = ''; }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 
 // 입력 칸 목록으로 폼 HTML 만들기
@@ -652,22 +662,80 @@ let projTimer = null;
 function projSaveSoon() { clearTimeout(projTimer); projTimer = setTimeout(save, 600); }
 function setProj(id, k, v) { db.projects[id] = {...db.projects[id], [k]: v}; projSaveSoon(); }
 const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : (u ? 'https://' + u : '');
+const MORE_PAGES = ['weekly', 'money', 'studio'];
+// 핸드폰 아래 탭 '더보기'
+function openMore() {
+  const item = (pg, icon, label) => `<button class="btn sec" style="width:100%;margin-bottom:8px;text-align:left;font-size:16px" onclick="closeSheet();location.hash='${pg}'">${icon} ${label}</button>`;
+  openSheet('더보기', item('weekly', '📝', '주간계획') + item('money', '💰', '1억 만들기 프로젝트') + item('studio', '🎬', '콘텐츠 작업실') +
+    '<a class="btn" href="https://chatgpt.com/" target="_blank" rel="noopener" style="display:block;text-decoration:none;background:#10a37f;font-size:16px">🤖 ChatGPT 열기 ↗</a>');
+}
+const projName = pid => pid && db.projects[pid] ? `${db.projects[pid].emoji || '⭐'} ${db.projects[pid].name}` : '기타';
 function renderMoney() {
   const goal = Number(db.settings.projGoal) || 100000000, total = projTotal(), pct = Math.min(100, total / goal * 100);
   const m = thisMonth(), monthSum = db.projIncome.filter(x => (x.date || '').startsWith(m)).reduce((n, x) => n + (Number(x.amount) || 0), 0);
   $('moneyGoal').innerHTML = `<h3>🎯 목표 ${won(goal)}</h3>
     <div class="goal-big">${won(total)} <span class="muted" style="font-size:14px">모음 (${pct.toFixed(pct < 1 ? 2 : 1)}%)</span></div>
     <div class="bar" style="margin:8px 0"><i class="${pct >= 100 ? 'done' : ''}" style="width:${Math.max(pct, total ? 1 : 0)}%"></i></div>
-    <div class="muted">이번 달 수익 ${won(monthSum)} · 남은 금액 ${won(Math.max(0, goal - total))}</div>`;
+    <div class="muted">이번 달 수익 ${won(monthSum)} · 남은 금액 ${won(Math.max(0, goal - total))}</div>
+    ${projRows().length ? `<div style="margin-top:10px">${projRows().map(([id]) => `<div class="row" style="font-size:14px;padding:3px 0"><span class="grow">${esc(projName(id))}</span><b>${won(projTotal(id))}</b></div>`).join('')}</div>` : ''}`;
+  if (document.activeElement !== $('moneyPlan')) $('moneyPlan').value = db.settings.moneyPlan || '';
+  const list = [...db.projIncome].sort((a, b) => b.date.localeCompare(a.date));
+  $('incomeAll').innerHTML = list.slice(0, 30).map(x => `<li class="task"><span class="tag">${x.date.slice(2).replace(/-/g, '.')}</span>
+    <span class="txt">${won(x.amount)} <span class="muted">· ${esc(projName(x.proj))}${x.memo ? ' · ' + esc(x.memo) : ''}</span></span>
+    <button class="btn sec sm" onclick="delIncome('${x.id}')" aria-label="삭제">✕</button></li>`).join('') || '<li class="empty">아직 수익 기록이 없어요. ＋ 기록으로 첫 수익을 적어 보세요.</li>';
+}
+function renderStudio() {
   $('projList').innerHTML = projRows().map(([id, p]) => `<div class="card proj-card">
     <div class="proj-head"><span style="font-size:22px">${esc(p.emoji || '⭐')}</span>
-      <input class="pname" value="${esc(p.name)}" placeholder="프로젝트 이름" oninput="setProj('${id}','name',this.value)">
+      <input class="pname" value="${esc(p.name)}" placeholder="이름" oninput="setProj('${id}','name',this.value)">
       <span class="tag">${won(projTotal(id))}</span></div>
     <div class="row" style="margin-bottom:8px"><input class="grow" style="flex:1;min-width:0;font-size:14px" value="${esc(p.link || '')}" placeholder="주소 (예: 유튜브 채널, 블로그 주소)" oninput="setProj('${id}','link',this.value.trim())">
       <button class="btn sec sm" onclick="openProjLink('${id}')">열기 ↗</button></div>
     <textarea placeholder="메모 · 할 일 · 아이디어" oninput="setProj('${id}','memo',this.value)">${esc(p.memo || '')}</textarea>
-    <div class="row" style="margin-top:8px"><button class="btn sm grow" onclick="incomeSheet('${id}')">💵 수익 기록</button>
+    <div class="row" style="margin-top:8px"><button class="btn sm grow" onclick="postList('${id}')">📝 글 쓰기 · 보기 (${db.posts.filter(x => x.proj === id).length})</button>
+      <button class="btn sec sm" onclick="incomeSheet('${id}')">💵 수익</button>
       <button class="btn danger sm" onclick="delProject('${id}')">삭제</button></div></div>`).join('');
+}
+// ── 📝 글 쓰기 (블로그 글 · 전자책 원고 · 유튜브 대본 등)
+const POST_STATUS = ['아이디어', '쓰는 중', '완성', '올림'];
+const POST_TAG = {'아이디어': '', '쓰는 중': 'today', '완성': 's-talk', '올림': 'done'};
+function postList(pid) {
+  const list = db.posts.filter(x => x.proj === pid).sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+  openSheet(`📝 ${db.projects[pid].name} 글`, `<button class="btn" style="width:100%;margin-bottom:12px" onclick="newPost('${pid}')">＋ 새 글 쓰기</button>
+    <div class="card"><ul class="list">${list.map(x => `<li class="item" onclick="editPost('${x.id}')">
+      <div class="body"><div class="name">${esc(x.title || '(제목 없음)')}</div>
+      <div class="meta">${esc((x.body || '').replace(/\s+/g, ' ').slice(0, 40) || '내용 없음')} · ${(x.updated || '').slice(5, 10).replace('-', '/')}</div></div>
+      <span class="tag ${POST_TAG[x.status] || ''}">${esc(x.status || '아이디어')}</span></li>`).join('') || '<li class="empty">아직 글이 없어요. ＋ 새 글 쓰기를 눌러 보세요.</li>'}</ul></div>`);
+}
+function newPost(pid) {
+  const x = {id: uid(), proj: pid, title: '', body: '', status: '아이디어', updated: new Date().toISOString()};
+  db.posts.push(x); save(); editPost(x.id);
+}
+let postTimer = null;
+function setPost(id, k, v) {
+  const x = db.posts.find(y => y.id === id); if (!x) return;
+  x[k] = v; x.updated = new Date().toISOString();
+  clearTimeout(postTimer); postTimer = setTimeout(() => { save(); const el = $('postSaved'); if (el) el.textContent = '✓ 저장됨'; }, 700);
+  const el = $('postSaved'); if (el) el.textContent = '저장 중…';
+}
+function editPost(id) {
+  const x = db.posts.find(y => y.id === id); if (!x) return;
+  openSheet(`✏️ ${db.projects[x.proj] ? db.projects[x.proj].name : ''} 글`, `
+    <input id="postTitle" value="${esc(x.title)}" placeholder="제목" style="font-size:18px;font-weight:700;margin-bottom:8px" oninput="setPost('${id}','title',this.value)">
+    <div class="row" style="margin-bottom:8px"><select style="width:auto" onchange="setPost('${id}','status',this.value)">${POST_STATUS.map(st => `<option${st === x.status ? ' selected' : ''}>${st}</option>`).join('')}</select>
+      <span class="muted grow" id="postSaved">자동 저장됩니다</span></div>
+    <textarea id="postBody" style="min-height:55vh;font-size:16px;line-height:1.7" placeholder="여기에 글을 쓰세요. 쓰는 대로 자동 저장됩니다." oninput="setPost('${id}','body',this.value)">${esc(x.body)}</textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn sec grow" onclick="copyPost()">📋 전체 복사</button>
+      <a class="btn sec" href="https://chatgpt.com/" target="_blank" rel="noopener" style="text-decoration:none;line-height:22px">🤖 ChatGPT</a></div>
+    <div class="row" style="margin-top:8px"><button class="btn grow" onclick="save();postList('${x.proj}')">✓ 다 썼어요 (목록으로)</button>
+      <button class="btn danger" onclick="delPost('${id}')">삭제</button></div>`);
+}
+function copyPost() { const t = $('postTitle').value.trim(); copyText((t ? t + '\n\n' : '') + $('postBody').value); }
+function delPost(id) {
+  const x = db.posts.find(y => y.id === id);
+  if (!x || !confirm(`'${x.title || '제목 없는 글'}'을(를) 지울까요?`)) return;
+  db.posts = db.posts.filter(y => y.id !== id); save(); renderStudio(); postList(x.proj); toast('글을 지웠어요.');
 }
 function openProjLink(id) {
   const u = safeUrl(db.projects[id].link);
@@ -675,36 +743,40 @@ function openProjLink(id) {
   window.open(u, '_blank', 'noopener');
 }
 function addProject() {
-  const name = prompt('새 프로젝트 이름'); if (!name || !name.trim()) return;
+  const name = prompt('새 작업 이름 (예: 인스타그램)'); if (!name || !name.trim()) return;
   const order = Math.max(0, ...projRows().map(([, p]) => p.order)) + 1;
   db.projects['p' + uid()] = {order, emoji: '⭐', name: name.trim(), link: '', memo: ''};
-  save(); renderMoney();
+  save(); renderStudio();
 }
 function delProject(id) {
-  if (!confirm(`'${db.projects[id].name}' 프로젝트를 지울까요? 이 프로젝트의 수익 기록도 함께 지워집니다.`)) return;
-  delete db.projects[id]; db.projIncome = db.projIncome.filter(x => x.proj !== id);
-  save(); renderMoney();
+  if (!confirm(`'${db.projects[id].name}' 프로젝트를 지울까요? 이 작업의 글과 수익 기록도 함께 지워집니다.`)) return;
+  delete db.projects[id]; db.projIncome = db.projIncome.filter(x => x.proj !== id); db.posts = db.posts.filter(x => x.proj !== id);
+  save(); renderStudio();
 }
 function incomeSheet(pid) {
-  const p = db.projects[pid], list = db.projIncome.filter(x => x.proj === pid).sort((a, b) => b.date.localeCompare(a.date));
-  openSheet(`💵 ${p.name} 수익`, `<div class="card"><div class="formgrid">
+  const list = db.projIncome.filter(x => !pid || x.proj === pid).sort((a, b) => b.date.localeCompare(a.date));
+  const pick = pid ? '' : `<div class="full"><label>어디서 번 돈인가요?</label><select id="incProj">${projRows().map(([id]) => `<option value="${id}">${esc(projName(id))}</option>`).join('')}<option value="">기타</option></select></div>`;
+  openSheet(pid ? `💵 ${db.projects[pid].name} 수익` : '💵 수익 기록', `<div class="card"><div class="formgrid">${pick}
       <div><label>날짜</label><input type="date" id="incDate" value="${today()}"></div>
       <div><label>금액 (원)</label><input type="number" id="incAmt" inputmode="numeric" placeholder="예: 35000"></div>
       <div class="full"><label>메모</label><input id="incMemo" placeholder="예: 10월 애드센스"></div></div>
-      <button class="btn" style="width:100%;margin-top:10px" onclick="addIncome('${pid}')">기록하기</button></div>
-    <div class="card"><h3>기록 (합계 ${won(projTotal(pid))})</h3><ul class="list">${list.map(x => `<li class="task">
+      <button class="btn" style="width:100%;margin-top:10px" onclick="addIncome('${pid || ''}')">기록하기</button></div>
+    ${pid ? `<div class="card"><h3>기록 (합계 ${won(projTotal(pid))})</h3><ul class="list">${list.map(x => `<li class="task">
       <span class="tag">${x.date.slice(2).replace(/-/g, '.')}</span><span class="txt">${won(x.amount)}${x.memo ? ' · ' + esc(x.memo) : ''}</span>
-      <button class="btn sec sm" onclick="delIncome('${x.id}','${pid}')" aria-label="삭제">✕</button></li>`).join('') || '<li class="empty">아직 기록이 없어요.</li>'}</ul></div>`);
+      <button class="btn sec sm" onclick="delIncome('${x.id}','${pid}')" aria-label="삭제">✕</button></li>`).join('') || '<li class="empty">아직 기록이 없어요.</li>'}</ul></div>` : ''}`);
 }
 function addIncome(pid) {
   const amount = Number($('incAmt').value);
   if (!amount) return alert('금액을 넣어 주세요.');
-  db.projIncome.push({id: uid(), proj: pid, date: $('incDate').value || today(), amount, memo: $('incMemo').value.trim()});
-  save(); renderMoney(); incomeSheet(pid); toast('수익을 기록했어요 💰');
+  const proj = pid || ($('incProj') ? $('incProj').value : '');
+  db.projIncome.push({id: uid(), proj, date: $('incDate').value || today(), amount, memo: $('incMemo').value.trim()});
+  save(); refresh(); toast('수익을 기록했어요 💰');
+  if (pid) incomeSheet(pid); else closeSheet();
 }
 function delIncome(id, pid) {
   if (!confirm('이 기록을 지울까요?')) return;
-  db.projIncome = db.projIncome.filter(x => x.id !== id); save(); renderMoney(); incomeSheet(pid);
+  db.projIncome = db.projIncome.filter(x => x.id !== id); save(); refresh();
+  if (pid) incomeSheet(pid);
 }
 
 /* ───────── 💬 오늘의 확언 · 한마디 (날마다 바뀜, 누르면 다음 말) ───────── */
