@@ -356,7 +356,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.15-50';
+const APP_VERSION = '2026.10.15-51';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
@@ -786,9 +786,10 @@ function renderMoney() {
   const months = []; const d = new Date(m + '-01T00:00');
   for (let i = 5; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1); months.push(ymd(x).slice(0, 7)); }
   const max = Math.max(goal, ...months.map(monthSumFc));
-  $('fcHistory').innerHTML = months.map(mm => { const v = monthSumFc(mm); return `<div class="row" style="font-size:13px;margin-bottom:6px">
+  $('fcHistory').innerHTML = months.map(mm => { const v = monthSumFc(mm); return `<div class="row" style="font-size:13px;margin-bottom:6px;cursor:pointer" onclick="fcMonthList('${mm}')">
     <span style="width:34px">${+mm.slice(5)}월</span><div class="bar grow" style="flex:1"><i class="${v >= goal ? 'done' : ''}" style="width:${v / max * 100}%"></i></div>
-    <b style="width:58px;text-align:right">${shortWon(v)}</b></div>`; }).join('') + `<div class="muted" style="font-size:12px">막대 끝 = ${shortWon(max)}원</div>`;
+    <b style="width:58px;text-align:right">${shortWon(v)}</b></div>`; }).join('') + `<div class="muted" style="font-size:12px">막대 끝 = ${shortWon(max)}원 · 달을 누르면 기록을 보고 고치거나 지울 수 있어요</div>
+    <button class="btn sec" style="width:100%;margin-top:10px" onclick="fcMonthList('${m}')">📋 ${+m.slice(5)}월 소득 기록 보기 · 삭제</button>`;
   // 계획 칸이 비어 있으면 월 1억 계획표를 처음 한 번 넣어 둡니다
   if (!db.settings.moneyPlan || db.settings.moneyPlan.includes('━━━━')) { db.settings.moneyPlan = MONEY_PLAN; save(); }
   if (document.activeElement !== $('moneyPlan')) { $('moneyPlan').value = db.settings.moneyPlan || ''; fitPlan(); }
@@ -810,9 +811,7 @@ function fcIncomeSheet() {
     <div><label>구분</label><select id="fcKind">${FC_KIND.map(k => `<option>${k}</option>`).join('')}</select></div>
     <div><label>메모</label><input id="fcMemo" placeholder="예: 10월 수수료"></div></div>
     <button class="btn" style="width:100%;margin-top:12px" onclick="addFcIncome()">기록하기</button>
-    <div class="card" style="margin-top:12px"><h3>이번 달 기록</h3><ul class="list">${db.fcIncome.filter(x => (x.date || '').startsWith(thisMonth())).sort((a, b) => b.date.localeCompare(a.date)).map(x => `<li class="task"><span class="tag">${x.date.slice(5).replace('-', '/')}</span>
-      <span class="txt">${won(x.amount)} <span class="muted">· ${esc(x.kind || '수수료')}${x.memo ? ' · ' + esc(x.memo) : ''}</span></span>
-      <button class="btn sec sm" onclick="delFcIncome('${x.id}');fcIncomeSheet()" aria-label="삭제">✕</button></li>`).join('') || '<li class="empty">이번 달 기록이 없어요.</li>'}</ul></div>
+    <div class="card" style="margin-top:12px"><h3>이번 달 기록</h3><ul class="list">${fcListHtml(thisMonth(), 'fcIncomeSheet()')}</ul></div>
     <div class="row" style="margin-top:12px"><span class="muted grow">월 목표 금액</span><input type="number" id="fcGoal" style="width:150px" value="${Number(db.settings.fcMonthGoal) || 100000000}">
       <button class="btn sec sm" onclick="db.settings.fcMonthGoal=Number($('fcGoal').value)||100000000;save();renderMoney();toast('목표를 바꿨어요.')">저장</button></div>`);
 }
@@ -823,9 +822,21 @@ function addFcIncome() {
   db.fcIncome.push({id: uid(), date, amount, kind: $('fcKind').value, memo: $('fcMemo').value.trim()});
   save(); $('fcMonth').value = date.slice(0, 7); renderMoney(); closeSheet(); toast('소득을 기록했어요 💰');
 }
+function fcListHtml(m, after) {
+  return db.fcIncome.filter(x => (x.date || '').startsWith(m)).sort((a, b) => b.date.localeCompare(a.date)).map(x => `<li class="task"><span class="tag">${x.date.slice(5).replace('-', '/')}</span>
+      <span class="txt">${won(x.amount)} <span class="muted">· ${esc(x.kind || '수수료')}${x.memo ? ' · ' + esc(x.memo) : ''}</span></span>
+      <button class="btn danger sm" onclick="if(delFcIncome('${x.id}')){${after}}">삭제</button></li>`).join('') || '<li class="empty">이 달 기록이 없어요.</li>';
+}
+// 한 달 소득 기록 모아 보기 (지우기)
+function fcMonthList(m) {
+  openSheet(`📋 ${m.slice(0, 4)}년 ${+m.slice(5)}월 소득 기록`, `<div class="card"><div class="goal-big" style="font-size:22px;margin-bottom:6px">합계 ${won(monthSumFc(m))}</div>
+    <ul class="list">${fcListHtml(m, `fcMonthList('${m}')`)}</ul></div>
+    <button class="btn sec" style="width:100%" onclick="fcIncomeSheet()">＋ 소득 기록</button>`);
+}
 function delFcIncome(id) {
-  if (!confirm('이 기록을 지울까요?')) return;
-  db.fcIncome = db.fcIncome.filter(x => x.id !== id); save(); renderMoney();
+  if (!confirm('이 기록을 지울까요?')) return false;
+  db.fcIncome = db.fcIncome.filter(x => x.id !== id); save(); renderMoney(); toast('지웠어요.');
+  return true;
 }
 function renderStudio() {
   $('projList').innerHTML = projRows().map(([id, p]) => `<div class="card proj-card">
