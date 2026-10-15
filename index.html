@@ -357,7 +357,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.15-63';
+const APP_VERSION = '2026.10.15-64';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: 'DB고객', prospects: '가망고객', ceo: 'CEO 고객', goals: '목표', perf: '실적', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
@@ -834,9 +834,9 @@ function renderMoney() {
   const months = []; const d = new Date(m + '-01T00:00');
   for (let i = 5; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1); months.push(ymd(x).slice(0, 7)); }
   const max = Math.max(goal, ...months.map(monthSumFc));
-  $('fcHistory').innerHTML = months.map(mm => { const v = monthSumFc(mm); return `<div class="row" style="font-size:13px;margin-bottom:6px;cursor:pointer" onclick="fcMonthList('${mm}')">
-    <span style="width:38px;color:var(--accent);text-decoration:underline;font-weight:700">${+mm.slice(5)}월</span><div class="bar grow" style="flex:1"><i class="${v >= goal ? 'done' : ''}" style="width:${v / max * 100}%"></i></div>
-    <b style="width:58px;text-align:right">${shortWon(v)}</b></div>`; }).join('') + `<div class="muted" style="font-size:12px">막대 끝 = ${shortWon(max)}원 · 👉 달(예: 10월)을 누르면 그 달 기록을 보고 지울 수 있어요</div>`;
+  $('fcHistory').innerHTML = months.map(mm => { const v = monthSumFc(mm); return `<div class="row" style="font-size:13px;margin-bottom:6px">
+    <span style="width:34px">${+mm.slice(5)}월</span><div class="bar grow" style="flex:1;height:18px;cursor:pointer" onclick="fcMonthList('${mm}')" title="눌러서 ${+mm.slice(5)}월 기록 수정"><i class="${v >= goal ? 'done' : ''}" style="width:${v / max * 100}%"></i></div>
+    <b style="width:58px;text-align:right">${shortWon(v)}</b></div>`; }).join('') + `<div class="muted" style="font-size:12px">막대 끝 = ${shortWon(max)}원 · 👉 막대를 누르면 그 달 기록을 수정할 수 있어요</div>`;
   const list = db.fcIncome.filter(x => (x.date || '').startsWith(m)).sort((a, b) => b.date.localeCompare(a.date));
   if ($('incomeAll')) $('incomeAll').innerHTML = list.map(x => `<li class="task"><span class="tag">${x.date.slice(5).replace('-', '/')}</span>
     <span class="txt">${won(x.amount)} <span class="muted">· ${esc(x.kind || '수수료')}${x.memo ? ' · ' + esc(x.memo) : ''}</span></span>
@@ -869,6 +869,7 @@ function addFcIncome() {
 function fcListHtml(m, after) {
   return db.fcIncome.filter(x => (x.date || '').startsWith(m)).sort((a, b) => b.date.localeCompare(a.date)).map(x => `<li class="task"><span class="tag">${x.date.slice(5).replace('-', '/')}</span>
       <span class="txt">${won(x.amount)} <span class="muted">· ${esc(x.kind || '수수료')}${x.memo ? ' · ' + esc(x.memo) : ''}</span></span>
+      <button class="btn sec sm" onclick="fcEdit('${x.id}')">수정</button>
       <button class="btn danger sm" onclick="if(delFcIncome('${x.id}')){${after}}">삭제</button></li>`).join('') || '<li class="empty">이 달 기록이 없어요.</li>';
 }
 // 한 달 소득 기록 모아 보기 (지우기)
@@ -876,6 +877,24 @@ function fcMonthList(m) {
   openSheet(`📋 ${m.slice(0, 4)}년 ${+m.slice(5)}월 소득 기록`, `<div class="card"><div class="goal-big" style="font-size:22px;margin-bottom:6px">합계 ${won(monthSumFc(m))}</div>
     <ul class="list">${fcListHtml(m, `fcMonthList('${m}')`)}</ul></div>
     <button class="btn sec" style="width:100%" onclick="fcIncomeSheet()">＋ 소득 기록</button>`);
+}
+// 소득 기록 하나 고치기
+function fcEdit(id) {
+  const x = db.fcIncome.find(y => y.id === id); if (!x) return;
+  openSheet('✏️ 소득 기록 수정', `<div class="formgrid">
+    <div><label>날짜 (받은 날)</label><input type="date" id="fcDate" value="${esc(x.date)}"></div>
+    <div><label>금액 (원)</label><input type="number" id="fcAmt" inputmode="numeric" value="${Number(x.amount) || ''}"></div>
+    <div><label>구분</label><select id="fcKind">${FC_KIND.map(k => `<option${k === (x.kind || '수수료') ? ' selected' : ''}>${k}</option>`).join('')}</select></div>
+    <div><label>메모</label><input id="fcMemo" value="${esc(x.memo || '')}"></div></div>
+    <div class="row" style="margin-top:12px"><button class="btn grow" style="background:var(--ok)" onclick="fcEditSave('${id}')">💾 수정 저장</button>
+      <button class="btn sec" onclick="fcMonthList('${x.date.slice(0, 7)}')">취소</button></div>`);
+}
+function fcEditSave(id) {
+  const amount = Number($('fcAmt').value);
+  if (!amount) return alert('금액을 넣어 주세요.');
+  const date = $('fcDate').value || today();
+  db.fcIncome = db.fcIncome.map(y => y.id === id ? {...y, date, amount, kind: $('fcKind').value, memo: $('fcMemo').value.trim()} : y);
+  save(); renderMoney(); fcMonthList(date.slice(0, 7)); toast('수정했어요.');
 }
 function delFcIncome(id) {
   if (!confirm('이 기록을 지울까요?')) return false;
