@@ -133,7 +133,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 .dl-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
 .dl-row .nm{font-weight:700;font-size:14px}
 .dl-row .tg{font-size:12px;color:var(--sub)}
-.dl-row .wk{font-size:11px;color:var(--sub)}
+.dl-row .wk{font-size:11px;color:var(--sub);white-space:nowrap}
 .cnt{display:flex;align-items:center;gap:4px}
 .cnt button{width:38px;height:38px;border:1px solid var(--line);background:#fff;border-radius:10px;font-size:18px;font-weight:700}
 .cnt input{width:52px;text-align:center;padding:8px 2px;font-size:17px;font-weight:700}
@@ -374,7 +374,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.16-109';
+const APP_VERSION = '2026.10.16-110';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: '관심고객', prospects: '가망고객', ceo: 'CEO 고객', contracted: '기계약자', cards: '삼성카드', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
@@ -763,6 +763,13 @@ function weekDates(d) {
   const x = new Date(d + 'T00:00'), mon = new Date(x); mon.setDate(x.getDate() - ((x.getDay() + 6) % 7));
   return Array.from({length: 7}, (_, i) => { const y = new Date(mon); y.setDate(mon.getDate() + i); return ymd(y); });
 }
+// 이번 주 / 이번 달(선택한 날이 속한 달) 합계 글씨: '이번 주 23명 · 이번 달 80명' (목표 아래 한 줄)
+function dlSumText(k, unit) {
+  const cnt = d => Number(((db.dailyLog[d] || {}).counts || {})[k]) || 0, m = dlDate.slice(0, 7);
+  const w = weekDates(dlDate).reduce((t, d) => t + cnt(d), 0);
+  const mo = Object.keys(db.dailyLog).filter(d => d.startsWith(m)).reduce((t, d) => t + cnt(d), 0);
+  return `이번 주 ${w}${unit} · 이번 달 ${mo}${unit}`;
+}
 function renderDailyLog() {
   if (!dlDate) dlDate = today();
   const L = dlGet(dlDate), wk = weekDates(dlDate);
@@ -777,10 +784,10 @@ function renderDailyLog() {
       <button class="btn sm" style="background:var(--ok);white-space:nowrap" onclick="dlSave()">💾 저장</button></div>
     ${dlDate < today() && !dlHasData(db.dailyLog[dlDate]) ? `<div class="notice" style="background:#f1f5f9;border-color:#e2e8f0;color:#475569">${dlDate.slice(5).replace('-', '/')}(${WEEK(dlDate)})에는 기록이 없어요. 지금 적어도 됩니다.</div>` : ''}
     ${lock ? '<div class="notice" style="background:#ecfdf5;border-color:#a7f3d0;color:#065f46">✅ 저장된 기록입니다. 고치려면 맨 아래 <b>✏️ 수정</b>을 누르세요.</div>' : ''}
-    <div class="muted" style="margin-bottom:6px">${dlDate === today() ? '오늘' : dlDate.slice(5).replace('-', '/') + '(' + WEEK(dlDate) + ')'} 달성 <b id="dlScore">${done}</b> / ${DAILY_ITEMS.length}개 · 아래 작은 글씨는 이번 주 합계</div>
+    <div class="muted" style="margin-bottom:6px">${dlDate === today() ? '오늘' : dlDate.slice(5).replace('-', '/') + '(' + WEEK(dlDate) + ')'} 달성 <b id="dlScore">${done}</b> / ${DAILY_ITEMS.length}개 · 아래 작은 글씨는 이번 주·이번 달 합계</div>
     <h4 style="margin:10px 0 0">1. ${dlDate === today() ? '오늘' : `${dlDate.slice(5).replace('-', '/')}(${WEEK(dlDate)})`}의 목표와 실적</h4>
     ${DAILY_ITEMS.map(([k, name, goal, min, unit]) => { const v = Number(L.counts[k]) || 0; return `<div class="dl-row${v >= min ? ' ok' : ''}" id="dl-${k}">
-      <div><div class="nm">${name}</div><div class="tg">목표 ${goal} <span class="wk">· 이번 주 ${wsum(k)}${unit}</span></div></div>
+      <div><div class="nm">${name}</div><div class="tg">목표 ${goal}</div><div class="wk">${dlSumText(k, unit)}</div></div>
       <div class="cnt"><button${dis} onclick="dlStep('${k}',-1)" aria-label="${name} 빼기">−</button>
         <input${dis} type="number" inputmode="numeric" min="0" value="${v}" oninput="dlSet('${k}',this.value)" aria-label="${name} 실적">
         <button${dis} onclick="dlStep('${k}',1)" aria-label="${name} 더하기">＋</button></div></div>`; }).join('')}
@@ -807,7 +814,7 @@ function dlSet(k, val) {
   $('dlScore').textContent = DAILY_ITEMS.filter(([kk, , , min]) => (Number(L.counts[kk]) || 0) >= min).length;
   if (k === 'contract') $('dlContract').textContent = n;
   const wkEl = document.querySelector(`#dl-${k} .wk`);
-  if (wkEl) wkEl.textContent = `· 이번 주 ${weekDates(dlDate).reduce((t, d) => t + (Number(((db.dailyLog[d] || {}).counts || {})[k]) || 0), 0)}${it[4]}`;
+  if (wkEl) wkEl.textContent = dlSumText(k, it[4]);
 }
 function dlStep(k, d) {
   const n = Math.max(0, (Number(dlGet(dlDate).counts[k]) || 0) + d);
