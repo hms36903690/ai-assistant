@@ -205,7 +205,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
   <button data-page="money">💰 월 소득 1억원 달성</button>
   <button data-page="studio">🎬 콘텐츠 작업실</button>
   <button data-page="weekly">📝 주간계획</button>
-  <button data-page="memos">🗒️ 메모장</button>
+  <button data-page="stars">⭐ 중요고객</button>
   <a class="side-link" href="https://chatgpt.com/" target="_blank" rel="noopener" onclick="return openGPT(event)">🤖 ChatGPT ↗</a>
 </nav>
 
@@ -243,7 +243,8 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
         <ul class="list" id="taskList"></ul>
         <ul class="list" id="todoList"></ul></div>
     </div>
-    <div class="card"><h3>⭐ 중요고객</h3><ul class="list" id="starList"></ul></div>
+    <div class="card"><div class="row" style="margin-bottom:6px"><h3 class="grow" style="margin:0">🗒️ 메모장</h3><button class="btn sm" style="white-space:nowrap" onclick="newMemo()">＋ 새 메모</button></div>
+      <ul class="list" id="memoList"></ul></div>
   </section>
 
   <!-- 개인 고객 -->
@@ -314,13 +315,10 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
       <div id="fireYearBox"></div></div>
   </section>
 
-  <!-- 🗒️ 메모장 (자유 메모 여러 장) -->
-  <section class="page" id="page-memos">
-    <div class="toolbar">
-      <input id="memoSearch" placeholder="메모 검색" oninput="renderMemos()">
-      <button class="btn" style="white-space:nowrap" onclick="newMemo()">＋ 새 메모</button>
-    </div>
-    <div class="card"><ul class="list" id="memoList"></ul></div>
+  <!-- ⭐ 중요고객 (고객·관심·가망·CEO에서 ☆ 표시한 분들) -->
+  <section class="page" id="page-stars">
+    <p class="muted" style="margin:0 2px 10px">고객·관심·가망·CEO 목록에서 ☆를 누른 분들이 여기에 모여요.</p>
+    <div class="card"><ul class="list" id="starList"></ul></div>
   </section>
 
   <!-- 가망고객 (아직 상담 전) -->
@@ -399,10 +397,10 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.29-123';
+const APP_VERSION = '2026.10.29-124';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
-const PAGES = {home: '홈', customers: '고객', dbleads: '관심고객', prospects: '가망고객', ceo: 'CEO 고객', contracted: '기계약자', cards: '삼성카드', fires: '삼성화재', memos: '메모장', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
+const PAGES = {home: '홈', customers: '고객', dbleads: '관심고객', prospects: '가망고객', ceo: 'CEO 고객', contracted: '기계약자', cards: '삼성카드', fires: '삼성화재', stars: '중요고객', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
 
 function defaults() {
   return {settings: {fcName: '현미숙 FC', signature: '삼성생명 FC 현미숙 드림', lastBackup: '', projGoal: 100000000, fcMonthGoal: 100000000}, customers: [], dbleads: [], prospects: [], ceos: [], contracted: [], cards: [], fires: [], memos: [], goals: {}, perf: [], routines: defaultRoutines(), routineLog: {}, edu: [], tasks: [], weekly: defaultWeekly(), projects: defaultProjects(), projIncome: [], posts: [], fcIncome: [], dailyLog: {}, _sync: {del: {}, keys: {}, settingsAt: 0}};
@@ -511,7 +509,7 @@ document.querySelectorAll('[data-page]').forEach(b => b.addEventListener('click'
 window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
 
 function render(id) {
-  ({home: renderHome, customers: renderCustomers, dbleads: renderDb, prospects: renderProspects, ceo: renderCeos, contracted: renderContracted, cards: renderCards, fires: renderFires, memos: renderMemos, goals: renderGoals, weekly: renderWeekly, money: renderMoney, studio: renderStudio})[id]();
+  ({home: renderHome, customers: renderCustomers, dbleads: renderDb, prospects: renderProspects, ceo: renderCeos, contracted: renderContracted, cards: renderCards, fires: renderFires, stars: renderStars, goals: renderGoals, weekly: renderWeekly, money: renderMoney, studio: renderStudio})[id]();
 }
 function refresh() { render(location.hash.slice(1) in PAGES ? location.hash.slice(1) : 'home'); }
 
@@ -756,11 +754,11 @@ let projTimer = null;
 function projSaveSoon() { clearTimeout(projTimer); projTimer = setTimeout(save, 600); }
 function setProj(id, k, v) { db.projects[id] = {...db.projects[id], [k]: v}; projSaveSoon(); }
 const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : (u ? 'https://' + u : '');
-const MORE_PAGES = ['memos', 'contracted', 'cards', 'fires', 'money', 'weekly'];
+const MORE_PAGES = ['stars', 'contracted', 'cards', 'fires', 'money', 'weekly'];
 // 핸드폰 아래 탭 '더보기'
 function openMore() {
   const item = (pg, icon, label) => `<button class="btn sec" style="width:100%;margin-bottom:8px;text-align:left;font-size:16px" onclick="closeSheet();location.hash='${pg}'">${icon} ${label}</button>`;
-  openSheet('더보기', item('memos', '🗒️', '메모장') + item('contracted', '📋', '기계약자') + item('cards', '💳', '삼성카드') + item('fires', '🔥', '삼성화재') + item('money', '💰', '월 소득 1억원 달성') + item('weekly', '📝', '주간계획') +
+  openSheet('더보기', item('stars', '⭐', '중요고객') + item('contracted', '📋', '기계약자') + item('cards', '💳', '삼성카드') + item('fires', '🔥', '삼성화재') + item('money', '💰', '월 소득 1억원 달성') + item('weekly', '📝', '주간계획') +
     '<a class="btn" href="https://chatgpt.com/" target="_blank" rel="noopener" onclick="return openGPT(event)" style="display:block;text-decoration:none;background:#10a37f;font-size:16px">🤖 ChatGPT 열기 ↗</a>');
 }
 const projName = pid => pid && db.projects[pid] ? `${db.projects[pid].emoji || '⭐'} ${db.projects[pid].name}` : '기타';
@@ -1261,12 +1259,17 @@ function renderHome() {
   $('todoList').innerHTML = todo.length ? todo.map(({p, kind, tag}) => personItem(kind, p, esc(p.nextTodo || p.memo || ''), tag)).join('')
     : '<li class="empty">오늘 연락할 고객이 없습니다 👍</li>';
 
+  renderMemos();
+  renderHomeRest();
+}
+function renderStars() {
   const stars = [['c', db.customers], ['d', db.dbleads], ['p', db.prospects], ['ceo', db.ceos]].flatMap(([k, arr]) => arr.filter(x => x.star).map(x => [k, x]))
     .sort((a, b) => (a[1].next || '9999').localeCompare(b[1].next || '9999'));
   $('starList').innerHTML = stars.length
     ? stars.map(([kind, p]) => personItem(kind, p, esc([({c: '고객', d: '관심', p: '가망', ceo: 'CEO'})[kind], p.next ? '다음 연락 ' + p.next + (p.nextTodo ? ' · ' + p.nextTodo : '') : (p.stage || p.status || p.interest || (p.issues || []).join(', '))].filter(Boolean).join(' · ')), starBtn(kind, p))).join('')
     : '<li class="empty">고객 목록에서 ☆를 누르면 여기에 모입니다.</li>';
-
+}
+function renderHomeRest() {
   $('homeGoals').innerHTML = goalBars(thisMonth());
   renderRoutines();
   renderBdayCard();
@@ -2036,12 +2039,11 @@ function saveFire(id) {
 }
 /* ───────── 🗒️ 메모장 (자유 메모 여러 장, 적는 대로 자동 저장) ───────── */
 function renderMemos() {
-  const q = $('memoSearch').value.trim().toLowerCase();
-  const list = db.memos.filter(x => !q || (x.text || '').toLowerCase().includes(q)).sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+  const list = db.memos.sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
   $('memoList').innerHTML = list.length ? list.map(x => { const lines = (x.text || '').trim().split('\n');
     return `<li class="item" onclick="editMemo('${x.id}')"><div class="body"><div class="name">${esc(lines[0] || '(빈 메모)')}</div>
       <div class="meta">${esc(lines.slice(1).join(' ').slice(0, 50))}${lines.length > 1 ? ' · ' : ''}${(x.updated || '').slice(5, 10).replace('-', '/')}</div></div></li>`; }).join('')
-    : `<li class="empty">${db.memos.length ? '검색 결과가 없습니다.' : '생각나는 것을 자유롭게 적어 두세요. 오른쪽 위 ＋ 새 메모'}</li>`;
+    : '<li class="empty">생각나는 것을 자유롭게 적어 두세요. 오른쪽 위 ＋ 새 메모</li>';
 }
 function newMemo() { const x = {id: uid(), text: '', updated: new Date().toISOString()}; db.memos.push(x); save(); editMemo(x.id); }
 let memoTimer = null;
