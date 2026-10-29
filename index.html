@@ -205,7 +205,6 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
   <button data-page="money">💰 월 소득 1억원 달성</button>
   <button data-page="studio">🎬 콘텐츠 작업실</button>
   <button data-page="weekly">📝 주간계획</button>
-  <button data-page="stars">⭐ 중요고객</button>
   <a class="side-link" href="https://chatgpt.com/" target="_blank" rel="noopener" onclick="return openGPT(event)">🤖 ChatGPT ↗</a>
 </nav>
 
@@ -243,8 +242,9 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
         <ul class="list" id="taskList"></ul>
         <ul class="list" id="todoList"></ul></div>
     </div>
-    <div class="card"><div class="row" style="margin-bottom:6px"><h3 class="grow" style="margin:0">🗒️ 메모장</h3><button class="btn sm" style="white-space:nowrap" onclick="newMemo()">＋ 새 메모</button></div>
-      <ul class="list" id="memoList"></ul></div>
+    <div class="card"><div class="row" style="margin-bottom:6px"><h3 class="grow" style="margin:0">🗒️ 메모장</h3><span class="muted" id="memoSaved" style="font-size:12px"></span></div>
+      <textarea id="homeMemo" placeholder="생각나는 것, 전화번호, 할 말… 자유롭게 적어 두세요. 적는 대로 자동 저장됩니다." style="min-height:120px;font-size:15px;line-height:1.6" oninput="memoInput(this)"></textarea></div>
+    <div class="card"><h3>⭐ 중요고객</h3><ul class="list" id="starList"></ul></div>
   </section>
 
   <!-- 개인 고객 -->
@@ -313,12 +313,6 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
       <ul class="list" id="fireList"></ul></div>
     <div class="card"><div class="row"><h3 class="grow" style="margin:0;cursor:pointer" onclick="fireYearView=!fireYearView;fireYear=0;renderFires()">📊 월별 화재 <small id="fireToggle" class="muted" style="font-size:12px;font-weight:600">보기 ▾</small></h3><span class="tag" id="fireYearCount"></span></div>
       <div id="fireYearBox"></div></div>
-  </section>
-
-  <!-- ⭐ 중요고객 (고객·관심·가망·CEO에서 ☆ 표시한 분들) -->
-  <section class="page" id="page-stars">
-    <p class="muted" style="margin:0 2px 10px">고객·관심·가망·CEO 목록에서 ☆를 누른 분들이 여기에 모여요.</p>
-    <div class="card"><ul class="list" id="starList"></ul></div>
   </section>
 
   <!-- 가망고객 (아직 상담 전) -->
@@ -397,13 +391,13 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.10.29-124';
+const APP_VERSION = '2026.10.29-125';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
-const PAGES = {home: '홈', customers: '고객', dbleads: '관심고객', prospects: '가망고객', ceo: 'CEO 고객', contracted: '기계약자', cards: '삼성카드', fires: '삼성화재', stars: '중요고객', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
+const PAGES = {home: '홈', customers: '고객', dbleads: '관심고객', prospects: '가망고객', ceo: 'CEO 고객', contracted: '기계약자', cards: '삼성카드', fires: '삼성화재', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
 
 function defaults() {
-  return {settings: {fcName: '현미숙 FC', signature: '삼성생명 FC 현미숙 드림', lastBackup: '', projGoal: 100000000, fcMonthGoal: 100000000}, customers: [], dbleads: [], prospects: [], ceos: [], contracted: [], cards: [], fires: [], memos: [], goals: {}, perf: [], routines: defaultRoutines(), routineLog: {}, edu: [], tasks: [], weekly: defaultWeekly(), projects: defaultProjects(), projIncome: [], posts: [], fcIncome: [], dailyLog: {}, _sync: {del: {}, keys: {}, settingsAt: 0}};
+  return {settings: {fcName: '현미숙 FC', signature: '삼성생명 FC 현미숙 드림', lastBackup: '', projGoal: 100000000, fcMonthGoal: 100000000}, customers: [], dbleads: [], prospects: [], ceos: [], contracted: [], cards: [], fires: [], goals: {}, perf: [], routines: defaultRoutines(), routineLog: {}, edu: [], tasks: [], weekly: defaultWeekly(), projects: defaultProjects(), projIncome: [], posts: [], fcIncome: [], dailyLog: {}, _sync: {del: {}, keys: {}, settingsAt: 0}};
 }
 function load() {
   try {
@@ -414,7 +408,7 @@ function load() {
 }
 let db = load();
 // 동기화를 위해 무엇이 언제 바뀌었는지 기록합니다 (항목마다 _u = 고친 시각, 지운 항목은 _sync.del)
-const COLLS = ['customers', 'dbleads', 'prospects', 'ceos', 'contracted', 'cards', 'fires', 'memos', 'perf', 'edu', 'tasks', 'routines', 'projIncome', 'posts', 'fcIncome'];
+const COLLS = ['customers', 'dbleads', 'prospects', 'ceos', 'contracted', 'cards', 'fires', 'perf', 'edu', 'tasks', 'routines', 'projIncome', 'posts', 'fcIncome'];
 const MAPS = ['goals', 'routineLog', 'weekly', 'projects', 'dailyLog'];
 const clone = o => JSON.parse(JSON.stringify(o));
 const bare = r => { const {_u, ...rest} = r; return JSON.stringify(rest); };
@@ -509,7 +503,7 @@ document.querySelectorAll('[data-page]').forEach(b => b.addEventListener('click'
 window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
 
 function render(id) {
-  ({home: renderHome, customers: renderCustomers, dbleads: renderDb, prospects: renderProspects, ceo: renderCeos, contracted: renderContracted, cards: renderCards, fires: renderFires, stars: renderStars, goals: renderGoals, weekly: renderWeekly, money: renderMoney, studio: renderStudio})[id]();
+  ({home: renderHome, customers: renderCustomers, dbleads: renderDb, prospects: renderProspects, ceo: renderCeos, contracted: renderContracted, cards: renderCards, fires: renderFires, goals: renderGoals, weekly: renderWeekly, money: renderMoney, studio: renderStudio})[id]();
 }
 function refresh() { render(location.hash.slice(1) in PAGES ? location.hash.slice(1) : 'home'); }
 
@@ -754,11 +748,11 @@ let projTimer = null;
 function projSaveSoon() { clearTimeout(projTimer); projTimer = setTimeout(save, 600); }
 function setProj(id, k, v) { db.projects[id] = {...db.projects[id], [k]: v}; projSaveSoon(); }
 const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : (u ? 'https://' + u : '');
-const MORE_PAGES = ['stars', 'contracted', 'cards', 'fires', 'money', 'weekly'];
+const MORE_PAGES = ['contracted', 'cards', 'fires', 'money', 'weekly'];
 // 핸드폰 아래 탭 '더보기'
 function openMore() {
   const item = (pg, icon, label) => `<button class="btn sec" style="width:100%;margin-bottom:8px;text-align:left;font-size:16px" onclick="closeSheet();location.hash='${pg}'">${icon} ${label}</button>`;
-  openSheet('더보기', item('stars', '⭐', '중요고객') + item('contracted', '📋', '기계약자') + item('cards', '💳', '삼성카드') + item('fires', '🔥', '삼성화재') + item('money', '💰', '월 소득 1억원 달성') + item('weekly', '📝', '주간계획') +
+  openSheet('더보기', item('contracted', '📋', '기계약자') + item('cards', '💳', '삼성카드') + item('fires', '🔥', '삼성화재') + item('money', '💰', '월 소득 1억원 달성') + item('weekly', '📝', '주간계획') +
     '<a class="btn" href="https://chatgpt.com/" target="_blank" rel="noopener" onclick="return openGPT(event)" style="display:block;text-decoration:none;background:#10a37f;font-size:16px">🤖 ChatGPT 열기 ↗</a>');
 }
 const projName = pid => pid && db.projects[pid] ? `${db.projects[pid].emoji || '⭐'} ${db.projects[pid].name}` : '기타';
@@ -1238,8 +1232,19 @@ function monthStats(m) {
     premium: perf.reduce((n, p) => n + (Number(p.premium) || 0), 0),
   };
 }
+// 🗒️ 홈 메모장: 적는 대로 자동 저장 (휴대폰·태블릿 동기화)
+let memoTimer = null;
+function memoInput(t) {
+  fitTa(t); $('memoSaved').textContent = '저장 중…';
+  clearTimeout(memoTimer); memoTimer = setTimeout(() => { db.settings.homeMemo = t.value; save(); $('memoSaved').textContent = '✓ 저장됨'; }, 600);
+}
+function renderHomeMemo() {
+  const t = $('homeMemo'); if (document.activeElement === t) return; // 쓰는 중에는 건드리지 않기
+  t.value = db.settings.homeMemo || ''; fitTa(t); $('memoSaved').textContent = '';
+}
 function renderHome() {
   const now = new Date();
+  renderHomeMemo();
   $('helloText').textContent = `안녕하세요, ${db.settings.fcName}님`;
   renderQuote();
   $('todayText').textContent = now.toLocaleDateString('ko-KR', {year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
@@ -1259,17 +1264,12 @@ function renderHome() {
   $('todoList').innerHTML = todo.length ? todo.map(({p, kind, tag}) => personItem(kind, p, esc(p.nextTodo || p.memo || ''), tag)).join('')
     : '<li class="empty">오늘 연락할 고객이 없습니다 👍</li>';
 
-  renderMemos();
-  renderHomeRest();
-}
-function renderStars() {
   const stars = [['c', db.customers], ['d', db.dbleads], ['p', db.prospects], ['ceo', db.ceos]].flatMap(([k, arr]) => arr.filter(x => x.star).map(x => [k, x]))
     .sort((a, b) => (a[1].next || '9999').localeCompare(b[1].next || '9999'));
   $('starList').innerHTML = stars.length
     ? stars.map(([kind, p]) => personItem(kind, p, esc([({c: '고객', d: '관심', p: '가망', ceo: 'CEO'})[kind], p.next ? '다음 연락 ' + p.next + (p.nextTodo ? ' · ' + p.nextTodo : '') : (p.stage || p.status || p.interest || (p.issues || []).join(', '))].filter(Boolean).join(' · ')), starBtn(kind, p))).join('')
     : '<li class="empty">고객 목록에서 ☆를 누르면 여기에 모입니다.</li>';
-}
-function renderHomeRest() {
+
   $('homeGoals').innerHTML = goalBars(thisMonth());
   renderRoutines();
   renderBdayCard();
@@ -2037,39 +2037,6 @@ function saveFire(id) {
   $('fireMonth').value = v.month;
   save(); closeSheet(); refresh(); toast('저장했습니다.');
 }
-/* ───────── 🗒️ 메모장 (자유 메모 여러 장, 적는 대로 자동 저장) ───────── */
-function renderMemos() {
-  const list = db.memos.sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
-  $('memoList').innerHTML = list.length ? list.map(x => { const lines = (x.text || '').trim().split('\n');
-    return `<li class="item" onclick="editMemo('${x.id}')"><div class="body"><div class="name">${esc(lines[0] || '(빈 메모)')}</div>
-      <div class="meta">${esc(lines.slice(1).join(' ').slice(0, 50))}${lines.length > 1 ? ' · ' : ''}${(x.updated || '').slice(5, 10).replace('-', '/')}</div></div></li>`; }).join('')
-    : '<li class="empty">생각나는 것을 자유롭게 적어 두세요. 오른쪽 위 ＋ 새 메모</li>';
-}
-function newMemo() { const x = {id: uid(), text: '', updated: new Date().toISOString()}; db.memos.push(x); save(); editMemo(x.id); }
-let memoTimer = null;
-function setMemo(id, v) {
-  const x = db.memos.find(y => y.id === id); if (!x) return;
-  x.text = v; x.updated = new Date().toISOString(); $('memoSaved').textContent = '저장 중…';
-  clearTimeout(memoTimer); memoTimer = setTimeout(() => { save(); const el = $('memoSaved'); if (el) el.textContent = '✓ 저장됨'; }, 600);
-}
-function editMemo(id) {
-  const x = db.memos.find(y => y.id === id); if (!x) return;
-  openSheet('🗒️ 메모', `<div class="row" style="margin-bottom:6px"><span class="muted grow" id="memoSaved">적는 대로 자동 저장돼요</span></div>
-    <textarea id="memoText" style="min-height:50vh;font-size:16px;line-height:1.7" placeholder="첫 줄이 제목처럼 보여요" oninput="setMemo('${id}',this.value)">${esc(x.text || '')}</textarea>
-    <div class="row" style="margin-top:10px"><button class="btn grow" onclick="memoDone('${id}')">✓ 다 썼어요</button>
-      <button class="btn sec" onclick="copyText($('memoText').value)">📋 복사</button>
-      <button class="btn danger" onclick="delMemo('${id}')">삭제</button></div>`);
-  setTimeout(() => $('memoText') && $('memoText').focus(), 50);
-}
-function memoDone(id) {
-  clearTimeout(memoTimer); const x = db.memos.find(y => y.id === id);
-  if (x && !(x.text || '').trim()) db.memos = db.memos.filter(y => y.id !== id); // 빈 메모는 지움
-  save(); closeSheet(); refresh();
-}
-function delMemo(id) {
-  if (!confirm('이 메모를 지울까요?')) return;
-  clearTimeout(memoTimer); db.memos = db.memos.filter(y => y.id !== id); save(); closeSheet(); refresh(); toast('메모를 지웠어요.');
-}
 function renderProspects() {
   const q = $('prosSearch').value.trim().toLowerCase();
   setStarFilterBtn('prosStarBtn', starOnly.p);
@@ -2549,8 +2516,12 @@ async function syncOff() {
 
 /* ───────── 시작 ───────── */
 cleanTasks();
-// 잠깐 홈 메모장에 적어 둔 글이 있으면 새 메모장으로 옮기기
-if (db.settings.homeMemo) { db.memos.push({id: uid(), text: db.settings.homeMemo, updated: new Date().toISOString()}); delete db.settings.homeMemo; save(); }
+// 잠깐 따로 메뉴였던 메모장(memos)에 적은 글이 있으면 홈 메모장으로 합치기 (처음 모양으로 되돌림)
+if (Array.isArray(db.memos) && db.memos.length) {
+  const add = db.memos.map(x => (x.text || '').trim()).filter(Boolean).filter(t => !(db.settings.homeMemo || '').includes(t));
+  if (add.length) db.settings.homeMemo = [db.settings.homeMemo || '', ...add].filter(Boolean).join('\n\n');
+  db.memos = []; save();
+}
 // 한 번만: 주간계획을 새 한글(hwp) 계획표로 새로고침 (2026-10-26 요청)
 if (!db.settings.weeklyV2) { db.weekly = defaultWeekly(); db.settings.weeklyV2 = true; save(); }
 // 한 번만: 이미 저장된 전화번호도 '-' 넣은 모양으로 맞추기
