@@ -236,7 +236,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
       <button onclick="editPerf()">＋ 실적</button>
     </div>
     <div class="grid2">
-      <div class="card" style="grid-column:1/-1"><h3>이번 달 목표</h3><div id="homeGoals"></div></div>
+      <div class="card" style="grid-column:1/-1"><div class="row" style="margin-bottom:10px;gap:10px"><h3 style="margin:0;white-space:nowrap" id="homeGoalTitle">이번 달 목표</h3><input type="month" id="homeGoalMonth" aria-label="목표 달" style="width:auto;padding:6px 8px;font-size:14px" onchange="renderHomeGoals()"></div><div id="homeGoals"></div></div>
       <div class="card" style="grid-column:1/-1">
         <div class="row" style="margin-bottom:10px;gap:10px"><h3 style="margin:0;white-space:nowrap">오늘 할 일</h3><input type="date" id="taskDate" aria-label="할 일 날짜" style="width:auto;padding:6px 8px;font-size:14px"></div>
         <div class="row" style="margin-bottom:6px">
@@ -399,7 +399,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.02-130';
+const APP_VERSION = '2026.11.02-131';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: '관심고객', prospects: '가망고객', ceo: 'CEO 고객', contracted: '기계약자', cards: '삼성카드', fires: '삼성화재', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
@@ -1337,7 +1337,7 @@ function renderHome() {
     ? stars.map(([kind, p]) => personItem(kind, p, esc([({c: '고객', d: '관심', p: '가망', ceo: 'CEO'})[kind], p.next ? '다음 연락 ' + p.next + (p.nextTodo ? ' · ' + p.nextTodo : '') : (p.stage || p.status || p.interest || (p.issues || []).join(', '))].filter(Boolean).join(' · ')), starBtn(kind, p))).join('')
     : '<li class="empty">고객 목록에서 ☆를 누르면 여기에 모입니다.</li>';
 
-  $('homeGoals').innerHTML = goalBars(thisMonth());
+  renderHomeGoals();
   renderRoutines();
   renderBdayCard();
   renderEduCard();
@@ -2224,6 +2224,21 @@ function goalHintsUpdate() {
   const g = readForm(GOAL_FIELDS);
   GOAL_FIELDS.forEach(f => { $('gn_' + f.k).textContent = goalHint(f.k, g); });
 }
+// 홈 목표: 달을 골라 그 달 목표와 실적 보기 (기본은 이번 달)
+function renderHomeGoals() {
+  if (!$('homeGoalMonth').value) $('homeGoalMonth').value = thisMonth();
+  const m = $('homeGoalMonth').value;
+  $('homeGoalTitle').textContent = m === thisMonth() ? '이번 달 목표' : `${+m.slice(5)}월 목표`;
+  $('homeGoals').innerHTML = goalBars(m).replace('href="#goals"', `href="#goals" onclick="goGoalMonth('${m}');return false"`);
+}
+function goGoalMonth(m) { location.hash = 'goals'; setTimeout(() => { $('goalMonth').value = m; renderGoals(); }, 0); }
+// 목표가 없는 달: 가장 가까운 지난달 목표를 그대로 불러오기
+function prevGoalMonth(m) { return Object.keys(db.goals).filter(k => k < m && GOAL_FIELDS.some(f => Number(db.goals[k][f.k]) > 0)).sort().pop(); }
+function loadPrevGoals() {
+  const m = $('goalMonth').value || thisMonth(), pm = prevGoalMonth(m); if (!pm) return;
+  $('goalForm').innerHTML = goalFormHtml(db.goals[pm]); goalHintsUpdate();
+  toast(`${+pm.slice(5)}월 목표를 불러왔어요. 고칠 건 고치고 '목표 저장'을 눌러 주세요.`);
+}
 function goalBars(m, onGoalsPage) {
   const g = db.goals[m] || {}, s = monthStats(m);
   const rows = GOAL_FIELDS.filter(f => Number(g[f.k]) > 0);
@@ -2239,7 +2254,8 @@ function renderGoals() {
   if (!$('goalMonth').value) $('goalMonth').value = thisMonth();
   const m = $('goalMonth').value;
   $('goalProgress').innerHTML = goalBars(m, true) + '<p class="muted" style="margin:0">실적은 고객 등록일, 상담 기록, 실적 입력에서 자동으로 계산됩니다.</p>';
-  $('goalForm').innerHTML = goalFormHtml(db.goals[m] || {});
+  const has = GOAL_FIELDS.some(f => Number((db.goals[m] || {})[f.k]) > 0), pm = prevGoalMonth(m);
+  $('goalForm').innerHTML = (!has && pm ? `<div class="full" style="grid-column:1/-1"><button class="btn sec" style="width:100%" onclick="loadPrevGoals()">📋 ${+pm.slice(5)}월 목표 그대로 불러오기</button></div>` : '') + goalFormHtml(db.goals[m] || {});
   $('goalForm').oninput = goalHintsUpdate;
 }
 function saveGoals() {
