@@ -421,7 +421,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.08-138';
+const APP_VERSION = '2026.11.08-139';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: '관심고객', prospects: '가망고객', ceo: 'CEO 고객', contracted: '기계약자', cards: '삼성카드', fires: '삼성화재', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
@@ -886,25 +886,28 @@ function openMore() {
 }
 // 📄 삼성생명 홈페이지(상품공시실)로 가서 상품 약관 보기
 const SL_HOME = 'https://www.samsunglife.com/';
+// 삼성생명 공시실 '전체상품목록' (상품마다 상품요약서·사업방법서·보험약관이 있는 목록)
+const SL_PRODUCTS = 'https://www.samsunglife.com/individual/products/disclosure/sales/PDO-PRPRI010110M';
 function openSlTerms() {
   const recent = (db.settings.slRecent || []).slice(0, 6);
   openSheet('📄 삼성생명 상품 약관 찾기', `<label>보험 상품명</label>
     <div class="row" style="gap:6px"><input id="slName" class="grow" style="flex:1;min-width:0" placeholder="예: 삼성 생애보장보험" onkeydown="if(event.key==='Enter'&&!event.isComposing)slSearch()">
       <button class="btn" style="white-space:nowrap;background:#1428a0" onclick="slSearch()">약관 찾기</button></div>
     ${recent.length ? `<div class="chips" style="margin-top:8px">${recent.map(n => `<button class="chip" onclick="slSearch(this.textContent)">${esc(n)}</button>`).join('')}</div>` : ''}
-    <p class="muted" style="font-size:12px;margin:8px 0 12px">상품명을 넣고 누르면 삼성생명 홈페이지의 그 상품 약관·상품요약서를 바로 찾아 줘요.</p>
-    <a class="btn sec" style="display:block;text-align:center;text-decoration:none" href="${SL_HOME}" target="_blank" rel="noopener" onclick="closeSheet()">삼성생명 홈페이지 첫 화면 열기 ↗</a>
-    <p class="muted" style="font-size:12px;margin:8px 0 0">홈페이지에서 찾을 때: 공시실 → 상품공시 → 상품 이름 검색 → 약관. 약관에서 궁금한 부분을 복사해 🤖 ChatGPT에 "쉽게 설명해 줘"라고 물어보면 편해요.</p>`);
+    <div class="card" style="margin:10px 0;font-size:14px;line-height:1.7;background:#eff6ff">
+      <b>약관 찾기</b>를 누르면<br>① 상품명이 <b>저절로 복사</b>되고<br>② 삼성생명 <b>전체상품목록</b>(공시실)이 열려요<br>③ 그 화면 <b>상품명 검색칸을 꾹 눌러 '붙여넣기'</b> → 검색<br>④ 그 상품 줄의 <b>'보험약관'</b>을 누르면 끝!</div>
+    <a class="btn sec" style="display:block;text-align:center;text-decoration:none" href="${SL_PRODUCTS}" target="_blank" rel="noopener" onclick="closeSheet()">전체상품목록만 바로 열기 ↗</a>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">약관에서 궁금한 부분을 복사해 🤖 ChatGPT에 "쉽게 설명해 줘"라고 물어보면 편해요.</p>`);
   setTimeout(() => $('slName') && $('slName').focus(), 50);
 }
-// 상품명으로 바로 찾기: 삼성생명 홈페이지(samsunglife.com) 안에서 '상품명 약관' 검색 결과를 열어 줌
+// 상품명으로 찾기: 상품명을 복사해 두고 삼성생명 전체상품목록(공시실)을 열어 줌 (목록 화면 검색칸에 붙여넣기)
 function slSearch(name) {
   name = (name || $('slName').value || '').trim();
   if (!name) { $('slName').focus(); return; }
   db.settings.slRecent = [name, ...(db.settings.slRecent || []).filter(n => n !== name)].slice(0, 6); save();
-  const q = `site:samsunglife.com ${name} 약관`;
-  window.open('https://www.google.com/search?q=' + encodeURIComponent(q), '_blank', 'noopener');
-  closeSheet();
+  const copied = copyText(name); // 상품명 복사(먼저) → 목록 화면 검색칸에 붙여넣기
+  window.open(SL_PRODUCTS, '_blank', 'noopener');
+  closeSheet(); Promise.resolve(copied).finally(() => toast(`'${name}' 복사됨 — 검색칸에 꾹 눌러 붙여넣기 하세요`));
 }
 const projName = pid => pid && db.projects[pid] ? `${db.projects[pid].emoji || '⭐'} ${db.projects[pid].name}` : '기타';
 // 💰 삼성생명에서 매달 번 소득을 기록하고 월 1억 목표와 비교합니다
