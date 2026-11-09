@@ -47,7 +47,7 @@ button{cursor:pointer}
 .page{display:none}
 .page.active{display:block}
 .hero{background:linear-gradient(135deg,#102a43,#243b53);color:#fff;border-radius:18px;padding:20px 18px;margin-bottom:14px}
-.hero h2{margin:0 0 4px;font-size:21px}
+.hero h2{margin:0 0 4px;font-size:21px;word-break:keep-all;line-height:1.4}
 .hero .quote{margin:10px 0 10px;padding:10px 12px;background:rgba(255,255,255,.1);border-left:3px solid #f59e0b;border-radius:8px;font-size:15px;line-height:1.55;cursor:pointer}
 .hero .quote small{display:block;color:#fcd34d;font-size:12px;font-weight:700;margin-bottom:2px}
 .hero .quote .who{display:block;font-size:12px;opacity:.75;margin-top:2px}
@@ -239,7 +239,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 
   <!-- 홈 -->
   <section class="page" id="page-home">
-    <div class="hero"><h2 id="helloText"></h2><div class="quote" id="quoteText" onclick="quoteShift++;renderQuote()" title="누르면 다른 말 보기"></div><p id="todayText"></p></div>
+    <div class="hero"><h2 id="helloText" onclick="editSlogan()" title="눌러서 슬로건 고치기" style="cursor:pointer"></h2><div class="quote" id="quoteText" onclick="quoteShift++;renderQuote()" title="누르면 다른 말 보기"></div><p id="todayText"></p></div>
     <div id="backupNotice"></div>
     <div class="card" id="routineCard"></div>
     <div class="card" id="bdayCard" style="display:none"></div>
@@ -420,7 +420,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.09-147';
+const APP_VERSION = '2026.11.09-148';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: '관심고객', prospects: '가망고객', ceo: 'CEO 고객', contracted: '기계약자', cards: '삼성카드', fires: '삼성화재', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
@@ -1441,10 +1441,17 @@ function delNote(id) {
       <button class="btn danger grow" style="padding:14px" onclick="delNoteOk('${id}')">네, 지울게요</button></div>`);
 }
 function delNoteOk(id) { clearTimeout(noteTimer); db.notes = db.notes.filter(x => x.id !== id); save(); closeSheet(); renderNotes(true); toast('지웠어요.'); }
+// 홈 맨 위 보험 슬로건 (예전 '안녕하세요, 현미숙 FC님' 자리) — 누르면 고칠 수 있음
+const SLOGAN_DEFAULT = '보험은 모든 사람의 소중한 삶을 지키기 위해 필요해';
+function editSlogan() {
+  const v = prompt('홈 맨 위에 보일 나의 보험 슬로건', db.settings.slogan || SLOGAN_DEFAULT);
+  if (v === null) return;
+  db.settings.slogan = v.trim() || SLOGAN_DEFAULT; save(); $('helloText').textContent = db.settings.slogan; toast('슬로건을 바꿨어요.');
+}
 function renderHome() {
   const now = new Date();
   renderHomeMemo();
-  $('helloText').textContent = `안녕하세요, ${db.settings.fcName}님`;
+  $('helloText').textContent = db.settings.slogan || SLOGAN_DEFAULT;
   renderQuote();
   $('todayText').textContent = now.toLocaleDateString('ko-KR', {year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
 
