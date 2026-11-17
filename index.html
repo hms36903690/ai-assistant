@@ -245,6 +245,13 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 .pipe{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .pipe div{background:#f4f8f6;border:1px solid #cfe0d8;border-radius:12px;padding:8px 4px;text-align:center;font-size:11px;color:#0d3b2e;line-height:1.3}
 .pipe b{display:block;font-size:19px}
+.dash{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.dash button{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.dash button small{font-size:13px;color:var(--sub)}
+.dash button b{font-size:19px;color:#0d3b2e;white-space:nowrap}
+.dash button.hot{border-color:#d4b46a;background:#fbf7ea}
+.topic{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;font:inherit;color:inherit;cursor:pointer}
+.topic small{display:block;color:var(--sub);font-size:12px}
 .fd-pick{width:22px;height:22px;flex:none;accent-color:#0d3b2e}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#102a43;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
@@ -282,7 +289,6 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
   <!-- 홈 -->
   <section class="page" id="page-home">
     <div class="hero"><h2 id="helloText" onclick="editSlogan()" title="눌러서 슬로건 고치기" style="cursor:pointer"></h2><div class="quote" id="quoteText" onclick="quoteShift++;renderQuote()" title="누르면 다른 말 보기"></div><p id="todayText"></p></div>
-    <div id="newLeadNotice"></div>
     <div id="backupNotice"></div>
     <div class="card" id="routineCard"></div>
     <div class="card" id="bdayCard" style="display:none"></div>
@@ -465,6 +471,30 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
       <h3 style="margin:14px 0 8px">DB 상태</h3>
       <div class="pipe" id="pipe"></div>
     </div>
+    <div id="fdNewLeads"></div>
+    <!-- 4단계 📊 영업 현황 (DB 공간에만, 홈은 그대로) -->
+    <div class="card hms-card">
+      <div class="row" style="margin-bottom:8px"><h3 class="grow" style="margin:0">📊 영업 현황</h3><span class="muted" style="font-size:12px">숫자를 누르면 명단</span></div>
+      <div class="dash" id="salesDash"></div>
+    </div>
+    <!-- 5단계 🤖 AI 영업비서 -->
+    <div class="card hms-card">
+      <h3>🤖 AI 영업비서 <small class="muted" style="font-weight:400;font-size:12px">앱 안 규칙 · 외부로 정보 안 보냄</small></h3>
+      <div class="hub-grid">
+        <button class="hub" onclick="secSchedule()"><span class="ic">📅</span><b>상담 일정</b><small>약속·다음 연락 7일</small></button>
+        <button class="hub" onclick="secUncontacted()"><span class="ic">📵</span><b>미상담 고객 관리</b><small>아직 연락 못 한 분</small></button>
+        <button class="hub" onclick="secPrep()"><span class="ic">📝</span><b>상담 준비 · 요약</b><small>고객별 지난 이야기 정리</small></button>
+        <button class="hub" onclick="followOpen()"><span class="ic">🧭</span><b>다음 행동 추천</b><small>누구에게 무엇을</small></button>
+        <button class="hub" onclick="secIndustry()"><span class="ic">🏷️</span><b>업종별 고객 분류</b><small>업종마다 몇 명</small></button>
+        <button class="hub" onclick="secMonthly()"><span class="ic">📈</span><b>월간 실적 분석</b><small>이번 달 vs 지난달</small></button>
+      </div>
+    </div>
+    <!-- 6단계 ✍️ 콘텐츠 만들기 -->
+    <div class="card hms-card">
+      <h3>✍️ 이번 주 콘텐츠</h3>
+      <p class="muted" style="margin:0 0 8px;font-size:13px">매주 주제 3가지를 추천해요. 누르면 블로그 글·쇼츠 대본·인스타 글·홍보 문구가 상담 신청 링크와 함께 만들어져요. 올리기 전에 회사 광고 심의를 받아 주세요.</p>
+      <div id="weekTopics"></div>
+    </div>
     <div class="card hms-card" id="fdCond">
       <h3>🚀 발굴 조건</h3>
       <div class="formgrid">
@@ -518,7 +548,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-215';
+const APP_VERSION = '2026.11.17-216';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -1798,8 +1828,6 @@ function renderHome() {
   renderQuote();
   $('todayText').textContent = now.toLocaleDateString('ko-KR', {year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
 
-  const newLeads = db.dbleads.filter(d => d.isNew);
-  $('newLeadNotice').innerHTML = newLeads.length ? `<div class="notice" style="background:#eef7f2;border-color:#4caf50;color:#0d3b2e;cursor:pointer" onclick="location.hash='dbleads'">🔔 <b>새 상담 신청 ${newLeads.length}건</b> — ${newLeads.slice(0, 3).map(d => esc(d.name)).join(', ')}${newLeads.length > 3 ? ' 외' : ''} <b>›</b></div>` : '';
   const lb = db.settings.lastBackup, total = db.customers.length + db.ceos.length;
   const hasData = total + db.prospects.length + db.dbleads.length;
   $('backupNotice').innerHTML = hasData && (!lb || dayDiff(lb, today()) >= 14)
@@ -2890,7 +2918,7 @@ function fdRenderList() {
     : `<li class="empty">${db.finds.length ? '조건에 맞는 후보가 없어요.' : '아직 발굴한 후보가 없어요. [자동 발굴 시작]을 눌러 보세요.'}</li>`;
 }
 function renderFinder() {
-  db.finds = db.finds || []; renderPipe();
+  db.finds = db.finds || []; renderPipe(); renderSales();
   if ($('hubFdCnt')) $('hubFdCnt').textContent = `발굴 DB ${db.finds.length}곳 보기 ›`;
   const fill = (id, list) => { const el = $(id); if (!el.options.length) el.innerHTML = list.map(v => `<option>${esc(v)}</option>`).join(''); };
   fill('fdRegion', FD_REGIONS); fill('fdInd', Object.keys(FD_INDS)); fill('fdGroup', FD_GROUPS);
@@ -3388,6 +3416,171 @@ function followOpen() {
     <ul class="list">${items.slice(0, 40).map(({k, p, act}) => `<li class="item" onclick="SHOW['${k}']('${p.id}')"><div class="avatar">${k === 'd' ? '📥' : esc(p.name.slice(0, 1))}</div>
       <div class="body"><div class="name">${esc(p.name)} <span class="muted" style="font-size:12px">${k === 'd' ? esc(p.status || '미연락') : '고객'}</span></div><div class="meta">${esc(act)}</div></div></li>`).join('') || '<li class="empty">지금 따로 챙길 사람이 없어요 👍</li>'}</ul>`);
 }
+
+/* ───────── 4~6단계 (DB자동발굴 화면 안: 영업 현황 · AI 영업비서 · 이번 주 콘텐츠) ─────────
+   홈은 바꾸지 않음(사용자 요청). 'AI'는 앱 안 규칙으로 만든 추천·요약이에요(고객 정보를 외부 AI로 보내지 않음). */
+const allPeople = () => [...db.customers.map(p => ['c', p]), ...db.dbleads.map(p => ['d', p]), ...db.ceos.map(p => ['ceo', p])];
+const pName = (k, p) => k === 'ceo' ? p.company : p.name;
+const pStatus = (k, p) => k === 'd' ? (p.status || '미연락') : (p.cstatus || '');
+function dashData() {
+  const t = today(), m = thisMonth(), wk = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return ymd(d); })();
+  const ppl = allPeople(), s = monthStats(m), perf = db.perf.filter(p => (p.date || '').startsWith(m));
+  return [
+    ['오늘 신규 DB', ppl.filter(([k, p]) => (k === 'd' ? (p.received || p.created) : p.created) === t), '명', true],
+    ['전체 고객', ppl, '명'],
+    ['상담 예정', ppl.filter(([k, p]) => pStatus(k, p) === '약속잡음' && (!p.next || p.next >= t)), '명', true],
+    ['미연락 고객', db.dbleads.filter(d => (d.status || '미연락') === '미연락').map(p => ['d', p]), '명', true],
+    ['보장분석 진행', db.customers.filter(c => c.stage === '상담중').map(p => ['c', p]), '명'],
+    ['제안 진행', db.customers.filter(c => c.stage === '제안').map(p => ['c', p]), '명'],
+    ['신규 계약 (이번 달)', perf.filter(p => (p.type || '신계약') === '신계약'), '건'],
+    ['월간 상담 실적', s.consult, '건'],
+    ['월간 계약 실적', perf, '건', false, shortWon(s.premium) + '원'],
+    ['후속 연락 예정 (7일)', ppl.filter(([k, p]) => p.next && p.next >= t && p.next <= wk), '명', true],
+  ];
+}
+function renderSales() {
+  if (!$('salesDash')) return;
+  const nl = db.dbleads.filter(d => d.isNew);
+  $('fdNewLeads').innerHTML = nl.length ? `<div class="notice" style="background:#eef7f2;border-color:#4caf50;color:#0d3b2e;cursor:pointer" onclick="location.hash='dbleads'">🔔 <b>새 상담 신청 ${nl.length}건</b> — ${nl.slice(0, 3).map(d => esc(d.name)).join(', ')}${nl.length > 3 ? ' 외' : ''} <b>›</b></div>` : '';
+  $('salesDash').innerHTML = dashData().map(([k, v, u, hot, sub], i) => {
+    const n = Array.isArray(v) ? v.length : v;
+    return `<button class="${hot && n ? 'hot' : ''}" onclick="dashOpen(${i})"><small>${k}</small><b>${n}${u}${sub ? `<span class="muted" style="font-size:12px;font-weight:600"> · ${sub}</span>` : ''}</b></button>`;
+  }).join('');
+  renderWeekTopics();
+}
+function personRows(list) {
+  return `<ul class="list">${list.map(([k, p]) => `<li class="item" onclick="SHOW['${k}']('${p.id}')"><div class="avatar">${k === 'ceo' ? '🏢' : k === 'd' ? '📥' : esc(String(p.name || '?').slice(0, 1))}</div>
+    <div class="body"><div class="name">${esc(pName(k, p))} <span class="muted" style="font-size:12px">${({c: '고객', d: '관심', ceo: 'CEO'})[k]}</span></div>
+    <div class="meta">${esc([pStatus(k, p), k === 'c' && p.stage, p.next && '다음 ' + mdK(p.next), p.phone].filter(Boolean).join(' · '))}</div></div></li>`).join('') || '<li class="empty">해당하는 분이 없어요.</li>'}</ul>`;
+}
+function dashOpen(i) {
+  const [k, v] = dashData()[i];
+  if (!Array.isArray(v)) return location.hash = 'goals';
+  if (v.length && !Array.isArray(v[0])) return openSheet('📋 ' + k, `<ul class="list">${v.map(p => `<li class="item" onclick="editPerf('${p.id}')"><div class="body"><div class="name">${esc(p.name)}</div><div class="meta">${esc([p.date, p.product, p.type, p.premium && won(p.premium)].filter(Boolean).join(' · '))}</div></div></li>`).join('')}</ul>`);
+  openSheet('📋 ' + k, personRows([...v].sort((a, b) => (a[1].next || '9').localeCompare(b[1].next || '9'))));
+}
+// 📅 상담 일정: 오늘부터 7일 동안 약속·다음 연락
+function secSchedule() {
+  const t = today(), days = Array.from({length: 8}, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i); return ymd(d); });
+  const ppl = allPeople(), late = ppl.filter(([k, p]) => p.next && p.next < t && pStatus(k, p) !== '거절');
+  openSheet('📅 상담 일정 (오늘 ~ 7일)', (late.length ? `<div class="notice">⏰ 연락일이 지난 분 ${late.length}명</div>` + personRows(late) : '') +
+    days.map(d => { const l = ppl.filter(([, p]) => p.next === d); return `<h3 style="margin:14px 0 4px">${d === t ? '오늘' : mdK(d)} (${WEEK(d)}) <span class="muted" style="font-size:13px">${l.length}명</span></h3>${l.length ? personRows(l) : '<div class="muted" style="font-size:13px">약속 없음</div>'}`; }).join(''));
+}
+// 📵 미상담 고객: 관심고객 미연락 (상담 신청 먼저, 오래된 순)
+function secUncontacted() {
+  const l = db.dbleads.filter(d => (d.status || '미연락') === '미연락').sort((a, b) => !!/^상담신청/.test(b.source || '') - !!/^상담신청/.test(a.source || '') || (a.received || '').localeCompare(b.received || ''));
+  openSheet('📵 미상담 고객', `<p class="muted" style="margin-top:0">아직 연락하지 못한 관심고객이에요. 상담 신청으로 온 분이 맨 위예요. 신청한 날부터 며칠 지났는지 보여요.</p>
+    <ul class="list">${l.map(d => `<li class="item" onclick="showDb('${d.id}')"><div class="avatar">📥</div><div class="body"><div class="name">${esc(d.name)}${d.isNew ? ' <span class="tag" style="background:#e8f6ec;color:#1e7b34">NEW</span>' : ''}</div>
+      <div class="meta">${esc([d.source, d.interest, d.received && (dayDiff(d.received, today()) ? dayDiff(d.received, today()) + '일째' : '오늘 신청')].filter(Boolean).join(' · '))}</div></div></li>`).join('') || '<li class="empty">미연락 고객이 없어요 👍</li>'}</ul>`);
+}
+// 📝 상담 준비 · 요약: 고객을 고르면 지난 기록을 짧게 정리
+function secPrep() {
+  const t = today(), wk = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return ymd(d); })();
+  const soon = allPeople().filter(([, p]) => p.next && p.next >= t && p.next <= wk).sort((a, b) => a[1].next.localeCompare(b[1].next));
+  openSheet('📝 상담 준비 · 요약', `<input id="prepQ" placeholder="고객 이름으로 찾기" oninput="prepSearch()" style="margin-bottom:8px"><div id="prepList">${prepRows(soon)}</div>`);
+}
+const prepRows = l => `<ul class="list">${l.slice(0, 40).map(([k, p]) => `<li class="item" onclick="prepShow('${k}','${p.id}')"><div class="body"><div class="name">${esc(pName(k, p))} <span class="muted" style="font-size:12px">${({c: '고객', d: '관심', ceo: 'CEO'})[k]}</span></div><div class="meta">${esc([p.next && '다음 ' + mdK(p.next), pStatus(k, p)].filter(Boolean).join(' · '))}</div></div></li>`).join('') || '<li class="empty">7일 안에 약속한 분이 없어요. 위에서 이름으로 찾아보세요.</li>'}</ul>`;
+function prepSearch() { const q = $('prepQ').value.trim(); $('prepList').innerHTML = prepRows(q ? allPeople().filter(([k, p]) => (pName(k, p) || '').includes(q)) : []); }
+function prepSummary(k, p) {
+  const logs = [...(p.logs || [])].sort((a, b) => b.date.localeCompare(a.date));
+  const lines = [];
+  lines.push(`· 누구: ${pName(k, p)}${k === 'ceo' && p.boss ? ' (' + p.boss + ' 대표)' : ''}${k === 'c' && p.birth ? ' · ' + age(p.birth) : ''} · ${({c: '고객', d: '관심고객', ceo: 'CEO'})[k]}`);
+  const info = [k === 'c' && p.stage && '단계 ' + p.stage, pStatus(k, p) && '연락 ' + pStatus(k, p), p.product && '관심 ' + p.product, p.interest && '신청 ' + p.interest, k === 'ceo' && (p.issues || []).length && '이슈 ' + p.issues.join('·')].filter(Boolean);
+  if (info.length) lines.push('· 지금: ' + info.join(' / '));
+  const memo = String(p.memo || '').split('\n').filter(x => /업종|지역|연락 가능|문의/.test(x)).slice(0, 3);
+  if (memo.length) lines.push('· 신청 메모: ' + memo.join(' / '));
+  lines.push(logs.length ? `· 상담 ${logs.length}번 · 마지막 ${logs[0].date}: ${logs[0].note.replace(/\n/g, ' ').slice(0, 80)}` : '· 아직 상담 기록이 없어요 (첫 상담)');
+  if (logs[1]) lines.push(`· 그 전 ${logs[1].date}: ${logs[1].note.replace(/\n/g, ' ').slice(0, 60)}`);
+  lines.push('· 이번에 할 일: ' + (p.nextTodo || (logs.length ? '지난번 이야기 이어서 · 필요한 자료 준비' : '가입 보험·월 납입 가능 금액·가장 걱정하는 위험 여쭤보기')));
+  return lines.join('\n');
+}
+function prepShow(k, id) {
+  const p = findPerson(k, id); if (!p) return;
+  const txt = `[상담 준비] ${today()}\n` + prepSummary(k, p);
+  openSheet('📝 ' + pName(k, p) + ' 상담 준비', `<textarea id="prepOut" style="min-height:200px">${esc(txt)}</textarea>
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btn sec grow" onclick="copyText($('prepOut').value)">📋 복사</button><button class="btn hms-btn grow" onclick="SHOW['${k}']('${id}')">고객 창 열기</button></div>
+    <p class="muted" style="font-size:12px">상담 기록·메모로 앱이 정리한 요약이에요. 고객 창의 ✨ 상담 문구 만들기도 함께 쓰세요.</p>`);
+}
+// 🏷️ 업종별 고객 분류 (관심고객 메모·신청 내용 + 발굴 DB)
+function secIndustry() {
+  const ind = p => { const m = String(p.memo || '').match(/업종:\s*(.+)/); return m ? m[1].trim() : ''; };
+  const cnt = {}; const add = (k, w) => { k = k || '업종 모름'; (cnt[k] = cnt[k] || {d: 0, f: 0})[w]++; };
+  db.dbleads.forEach(d => add(ind(d), 'd')); db.customers.forEach(c => { const v = ind(c); if (v) add(v, 'd'); });
+  (db.finds || []).forEach(f => add((f.ind || '').split(' > ')[0], 'f'));
+  const rows = Object.entries(cnt).sort((a, b) => (b[1].d + b[1].f) - (a[1].d + a[1].f));
+  openSheet('🏷️ 업종별 고객 분류', `<p class="muted" style="margin-top:0">상담 신청 업종(관심고객·옮긴 고객)과 DB자동발굴 업종이에요.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px"><tr style="text-align:left;color:var(--sub)"><th>업종</th><th>신청·고객</th><th>발굴 후보</th></tr>
+    ${rows.map(([k, v]) => `<tr style="border-top:1px solid var(--line)"><td style="padding:8px 0">${esc(k)}</td><td>${v.d}</td><td>${v.f}</td></tr>`).join('')}</table>`);
+}
+// 📈 월간 실적 분석: 이번 달 vs 지난달
+function secMonthly() {
+  const m = thisMonth(), d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); const pm = ymd(d).slice(0, 7);
+  const calc = mm => {
+    const s = monthStats(mm), inM = x => (x || '').startsWith(mm);
+    const leads = db.dbleads.filter(x => inM(x.received || x.created)).length + db.customers.filter(c => inM(c.created) && convSrc(c) !== null).length;
+    const apply = db.dbleads.filter(x => inM(x.received || x.created) && /^상담신청/.test(x.source || '')).length;
+    return {leads, apply, newCust: s.newCust, consult: s.consult, contract: s.contract, premium: s.premium, finds: (db.finds || []).filter(f => inM(f.created)).length};
+  };
+  const a = calc(m), b = calc(pm), g = db.goals[m] || {};
+  const row = (lb, k, fmt = v => v, goal) => { const diff = a[k] - b[k]; return `<tr style="border-top:1px solid var(--line)"><td style="padding:8px 0">${lb}</td><td><b>${fmt(a[k])}</b>${goal ? ` <span class="muted" style="font-size:12px">/ ${fmt(goal)}</span>` : ''}</td><td class="muted">${fmt(b[k])}</td><td style="color:${diff > 0 ? '#1e7b34' : diff < 0 ? '#b42318' : 'var(--sub)'}">${diff > 0 ? '▲' : diff < 0 ? '▼' : '–'}</td></tr>`; };
+  const tips = [];
+  if (a.leads && !a.consult) tips.push('관심고객은 들어오는데 미팅이 없어요. 미상담 고객부터 연락해 보세요.');
+  if (a.consult && a.contract / a.consult < 0.1) tips.push('미팅 대비 계약이 적어요. 상담 준비 요약으로 고객별 걱정을 먼저 정리해 보세요.');
+  if (a.apply < b.apply) tips.push('상담 신청이 지난달보다 줄었어요. 이번 주 콘텐츠를 올려 보세요.');
+  if (!tips.length) tips.push('지난달과 비슷하거나 좋아요. 지금 흐름을 이어가세요 👍');
+  openSheet(`📈 ${+m.slice(5)}월 실적 분석`, `<table style="width:100%;border-collapse:collapse;font-size:14px"><tr style="text-align:left;color:var(--sub)"><th></th><th>이번 달</th><th>지난달</th><th></th></tr>
+    ${row('발굴 후보', 'finds')}${row('관심고객 유입', 'leads')}${row('└ 상담 신청', 'apply')}${row('신규 고객', 'newCust', v => v, Number(g.newCust) || 0)}${row('미팅', 'consult', v => v, (Number(g.consult) || 0) * 20)}${row('계약', 'contract', v => v, Number(g.contract) || 0)}${row('월 보험료', 'premium', v => shortWon(v) + '원', Number(g.premium) || 0)}</table>
+    <div class="card hms-card" style="margin-top:12px"><h3>🧭 이번 달 추천</h3><ul style="margin:0;padding-left:18px">${tips.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`);
+}
+/* ✍️ 이번 주 콘텐츠: 주제 모음에서 주마다 3개 (개인사업자·자영업자·CEO) → 블로그·쇼츠·인스타·홍보 문구 (상담 신청 링크 포함)
+   과장·가입 보장 약속·허위 금지. 상품 이름·숫자 약속 없이 '점검·준비' 중심 */
+const TOPICS = [
+  ['사장님이 아프면 가게도 멈춰요', '개인사업자', '대표님 소득 공백', ['입원하면 매출은 멈추고 고정비(월세·인건비)는 그대로 나가요', '내 보장이 하루 생활비·고정비를 얼마나 채워 주는지 확인', '가족이 알아야 할 보험 정보 한 장 정리']],
+  ['식당·카페 사장님 화재 대비 체크리스트', '식당·카페', '화재·가스·배상책임', ['가스·전기 사고는 내 가게만이 아니라 옆 가게 피해까지 생길 수 있어요', '손님이 다쳤을 때 책임(영업배상) 준비 여부 확인', '건물주 보험과 내 보험은 따로라는 점']],
+  ['미용실·네일숍, 손님 사고 대비하셨나요?', '미용실·네일숍', '배상책임', ['시술 중 손님 피부·눈 사고 같은 배상책임', '서서 일하는 직업병(허리·손목) 대비 건강 보장', '1인 사업장 대표님의 소득 공백 준비']],
+  ['보험료는 많이 내는데 보장은 부족한 이유', '개인사업자', '보험 점검', ['비슷한 보장이 여러 개 겹쳐 있지 않은지', '정작 큰 병(암·뇌·심장) 보장은 충분한지', '갱신형 보험료가 언제 얼마나 오르는지']],
+  ['법인 대표님이 꼭 챙겨야 할 3가지', 'CEO', 'CEO 보장', ['대표님 유고 시 회사 운영자금과 대출', '임원 퇴직금 규정과 재원 마련 (세무사와 확인)', '가업승계 준비는 미리 시작할수록 좋아요']],
+  ['자영업자 노후, 국민연금만으로 괜찮을까?', '자영업자', '노후 준비', ['퇴직금이 없는 자영업자의 노후 자금 계산', '노란우산공제·연금저축·연금보험 차이 쉽게 보기', '지금 시작할 수 있는 작은 금액부터']],
+  ['실손보험, 지금 내 것은 몇 세대일까?', '개인사업자', '실손 점검', ['가입 시기에 따라 보장과 자기부담금이 달라요', '갱신 때 보험료 변화 확인하는 법', '바꾸기 전에 꼭 따져 볼 것 (무조건 바꾸지 마세요)']],
+  ['직원 다치면 사장님 책임은 어디까지?', '자영업자', '근로자 사고', ['산재보험으로 되는 것과 안 되는 것', '직원 단체보험을 쓰는 사장님들이 많은 이유', '작은 가게도 확인해야 할 체크포인트']],
+  ['암 진단비, 얼마가 적당할까요?', '개인사업자', '암 보장', ['치료비만이 아니라 쉬는 동안 생활비까지 생각하기', '내 보험의 진단비와 갱신 여부 확인', '가족력이 있다면 먼저 점검']],
+  ['연말 전에 보험 한 번 정리하기', '개인사업자', '보험 정리', ['가족 전체 보험을 한 장 표로 정리', '안 쓰는 특약·겹치는 보장 확인', '보험금 청구 안 한 것 없는지 확인']],
+  ['펜션·숙박업 사장님 성수기 전 점검', '숙박업', '화재·배상책임', ['손님 사고·화재에 대한 배상책임', '건물·시설 보험 확인', '성수기 전 미리 점검해 둘 것']],
+  ['가족에게 남기는 가장 큰 선물, 사망 보장', '개인사업자', '종신·사망 보장', ['대출이 있다면 남은 가족의 부담부터 계산', '필요한 금액은 사람마다 달라요', '보험료 부담 없이 맞추는 방법']],
+];
+function weekNo() { const d = new Date(), s = new Date(d.getFullYear(), 0, 1); return Math.floor((d - s) / 604800000); }
+function renderWeekTopics() {
+  if (!$('weekTopics')) return;
+  const w = weekNo(), pick = [0, 1, 2].map(i => (w * 3 + i) % TOPICS.length);
+  $('weekTopics').innerHTML = pick.map(i => `<button class="topic" onclick="contentOpen(${i})"><b>${esc(TOPICS[i][0])}</b><small>${esc(TOPICS[i][1])} · ${esc(TOPICS[i][2])}</small></button>`).join('') +
+    `<button class="btn sec sm" onclick="contentAll()">다른 주제 모두 보기</button>`;
+}
+function contentAll() { openSheet('✍️ 콘텐츠 주제', TOPICS.map((t, i) => `<button class="topic" onclick="contentOpen(${i})"><b>${esc(t[0])}</b><small>${esc(t[1])} · ${esc(t[2])}</small></button>`).join('')); }
+function applyUrlFor(ch) {
+  if (!db.settings.applyPhone) return '';
+  const digits = String(db.settings.applyPhone).replace(/\D/g, '');
+  return new URL(`apply.html?${db.settings.inboxOn && db.settings.inboxUid ? 'u=' + db.settings.inboxUid + '&' : ''}to=${digits}&ch=${encodeURIComponent(ch)}`, location.href.split('#')[0].replace(/[?].*$/, '')).href;
+}
+const CONTENT_NOTE = '※ 보험 가입 전 상품설명서와 약관을 꼭 확인하세요. 보장 내용은 상품·가입 조건에 따라 달라요.';
+const tags = (...a) => [...new Set(a.map(x => '#' + String(x).replace(/[·\s()]/g, '')))].join(' ');
+function contentMake(i, kind) {
+  const [title, who, theme, pts] = TOPICS[i], fc = db.settings.fcName, ch = {blog: '블로그', shorts: '유튜브 쇼츠', insta: '인스타그램', promo: '카카오톡'}[kind], url = applyUrlFor(ch);
+  const cta = url ? `무료 상담 신청 👉 ${url}` : '무료 상담은 프로필의 상담 신청 링크로 남겨 주세요.';
+  if (kind === 'blog') return `[제목] ${title} | 삼성생명 ${fc}\n\n안녕하세요, 30년 동안 사장님들의 보험을 상담해 온 삼성생명 ${fc}입니다.\n오늘은 ${who} 사장님들께서 자주 물어보시는 '${theme}' 이야기를 쉽게 정리해 봤어요.\n\n${pts.map((p, n) => `${n + 1}. ${p}`).join('\n\n')}\n\n보험은 정답이 하나가 아니라, 사장님 상황에 맞는 답을 찾는 거예요.\n지금 가입하신 보험이 내 상황에 맞는지 궁금하시면 편하게 상담 신청 남겨 주세요. 꼭 필요한 것만 정직하게 말씀드릴게요.\n\n${cta}\n\n${CONTENT_NOTE}\n${tags(who, theme, '보험점검', '제주보험', '삼성생명')}`;
+  if (kind === 'shorts') return `[쇼츠 대본 · 약 40초] ${title}\n\n(0~3초 · 첫마디)\n"${who} 사장님, ${theme} 준비하셨어요?"\n\n(4~30초 · 핵심 3가지)\n${pts.map((p, n) => `${n + 1}) ${p}`).join('\n')}\n\n(31~40초 · 마무리)\n"내 보험이 맞는지 궁금하면, 고정 댓글 링크로 무료 상담 신청하세요. 삼성생명 ${fc}였습니다."\n\n[고정 댓글] ${cta}\n[화면 아래 작은 글씨] ${CONTENT_NOTE}`;
+  if (kind === 'insta') return `${title} 🌿\n\n${who} 사장님들께 꼭 드리고 싶은 이야기 👇\n${pts.map(p => '✔ ' + p).join('\n')}\n\n내 보험, 지금 상황에 맞는지 궁금하시면\n프로필 링크에서 무료 상담 신청해 주세요 😊\n\n${cta}\n\n${CONTENT_NOTE}\n${tags(who, theme, '보험상담', '제주', '자영업자', '삼성생명')}`;
+  return `[${who} 사장님께] ${title}\n${pts[0]}.\n내 보험이 잘 맞는지, 무료로 점검해 드려요. (가입 권유 없이 편하게)\n${cta}\n- 삼성생명 ${fc}\n${CONTENT_NOTE}`;
+}
+function contentOpen(i) {
+  const t = TOPICS[i];
+  openSheet('✍️ ' + t[0], `${db.settings.applyPhone ? '' : '<div class="notice">상담 신청 링크가 아직 없어요. [🔳 상담 신청 페이지]에서 내 번호를 넣으면 글에 링크가 자동으로 들어가요.</div>'}
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">${[['blog', '📝 블로그 글'], ['shorts', '🎬 쇼츠 대본'], ['insta', '📸 인스타'], ['promo', '💬 홍보 문구']].map(([k, lb]) => `<button class="btn sec sm grow" onclick="$('ctOut').value=contentMake(${i},'${k}');aiFit('ctOut')">${lb}</button>`).join('')}</div>
+    <textarea id="ctOut" style="min-height:260px">${esc(contentMake(i, 'blog'))}</textarea>
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btn hms-btn grow" onclick="copyText($('ctOut').value)">📋 복사</button></div>
+    <p class="muted" style="font-size:12px">과장·가입 보장 약속 없이 '점검·준비' 위주로 만들었어요. 올리기 전에 회사 광고 심의를 받고, 필요하면 고쳐서 쓰세요. 고객이 링크로 신청하면 채널별로 [유입 성과 분석]에 잡혀요.</p>`);
+  aiFit('ctOut');
+}
+function aiFit(id) { const t = $(id); if (!t) return; t.style.height = 'auto'; t.style.height = Math.max(200, t.scrollHeight + 4) + 'px'; }
 
 /* ───────── 목표 ───────── */
 const GOAL_FIELDS = [
