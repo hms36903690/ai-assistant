@@ -446,7 +446,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-205';
+const APP_VERSION = '2026.11.17-206';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -1630,7 +1630,8 @@ function monthStats(m) {
   const people = [...db.customers, ...db.ceos];
   const perf = db.perf.filter(p => inM(p.date));
   return {
-    newCust: people.filter(p => inM(p.created)).length,
+    // 신규 고객 = 그 달에 등록한 고객 + 관심고객 + CEO
+    newCust: people.filter(p => inM(p.created)).length + db.dbleads.filter(p => inM(p.created || p.received)).length,
     consult: people.reduce((n, p) => n + (p.logs || []).filter(l => inM(l.date)).length, 0),
     contract: perf.length,
     premium: perf.reduce((n, p) => n + (Number(p.premium) || 0), 0),
