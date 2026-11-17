@@ -309,6 +309,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
       <button class="btn sec" id="ceoStarBtn" onclick="starOnly.ceo=!starOnly.ceo;renderCeos()" aria-label="중요고객만 보기">☆</button>
       <button class="btn" onclick="editCeo()">＋</button>
     </div>
+    <div class="stats" id="ceoStats" style="grid-template-columns:repeat(4,1fr)"></div>
     <div class="card"><ul class="list" id="ceoList"></ul></div>
   </section>
 
@@ -443,7 +444,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-193';
+const APP_VERSION = '2026.11.17-194';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -1995,18 +1996,14 @@ const CUST_FIELDS = [
   {k: 'nextTodo', label: '다음에 할 일', ph: '예: 보장분석 결과 설명'},
   {k: 'memo', label: '메모', type: 'textarea', full: true},
 ];
-let custStatF = '';
 function renderCustomers() {
   const sel = $('custStage');
   if (!sel.options.length) sel.innerHTML = '<option value="">전체 단계</option>' + STAGES.map(s => `<option>${s}</option>`).join('');
   const q = $('custSearch').value.trim().toLowerCase(), st = sel.value;
   setStarFilterBtn('custStarBtn', starOnly.c);
-  // 관심고객처럼 위에 미연락·부재·약속·전체 (누르면 그 사람만 보기, 한 번 더 누르면 전체)
-  const cst = c => c.cstatus || '미연락', ccnt = x => db.customers.filter(c => cst(c) === x).length;
-  $('custStats').innerHTML = [['미연락', '미연락'], ['부재', '부재'], ['약속', '약속잡음'], ['전체', '']].map(([k, v]) =>
-    `<div class="stat${custStatF === v && v ? ' on' : ''}" style="padding:9px 10px;cursor:pointer" onclick="custStatF=custStatF==='${v}'?'':'${v}';renderCustomers()"><small>${k}</small><b style="font-size:19px">${v ? ccnt(v) : db.customers.length}</b></div>`).join('');
+  $('custStats').innerHTML = statBoxes('c', db.customers, 'renderCustomers');
   const list = db.customers
-    .filter(c => (!st || c.stage === st) && (!custStatF || cst(c) === custStatF) && (!starOnly.c || c.star) && (!q || [c.name, c.phone, c.memo, c.product].join(' ').toLowerCase().includes(q)))
+    .filter(c => (!st || c.stage === st) && (!statF.c || cst(c) === statF.c) && (!starOnly.c || c.star) && (!q || [c.name, c.phone, c.memo, c.product].join(' ').toLowerCase().includes(q)))
     .sort((a, b) => !!b.star - !!a.star || (a.next || '9999').localeCompare(b.next || '9999') || a.name.localeCompare(b.name, 'ko'));
   $('custList').innerHTML = list.length ? list.map(c => `
     <li class="item" onclick="showCustomer('${c.id}')">
@@ -2033,15 +2030,23 @@ function saveCustomer(id) {
   save(); toast('저장했습니다.');
   showCustomer(c ? c.id : db.customers[db.customers.length - 1].id); refresh();
 }
-// 고객 통화 결과 (관심고객과 같은 버튼). 상담 기록(실제 상담 숫자)에는 넣지 않음
-function custCallResult(id, result) {
-  const c = db.customers.find(x => x.id === id); if (!c) return;
+// 고객·CEO 통화 결과 (관심고객과 같은 버튼). 상담 기록(실제 상담 숫자)에는 넣지 않음
+const callBtns = (kind, p) => `<div class="call-btns" style="margin-bottom:12px">${['부재', '통화완료', '약속잡음', '보류', '거절'].map(r => `<button class="btn sec${p.cstatus === r ? ' on' : ''}" onclick="personCallResult('${kind}','${p.id}','${r}')">${{'부재': '📵 부재', '통화완료': '☎️ 통화완료', '약속잡음': '📅 약속잡음', '보류': '⏸ 보류', '거절': '🙅 거절'}[r]}</button>`).join('')}</div>`;
+function personCallResult(kind, id, result) {
+  const c = findPerson(kind, id); if (!c) return;
   c.cstatus = c.cstatus === result ? '미연락' : result; // 같은 버튼을 다시 누르면 해제
   if (c.cstatus === '부재' && (!c.next || c.next <= today())) { const t = new Date(); t.setDate(t.getDate() + 1); c.next = ymd(t); }
   save(); refresh();
-  if (c.cstatus === '약속잡음') { toast('약속 날짜를 다음 연락일에 적어 주세요.'); editCustomer(id); return; }
+  if (c.cstatus === '약속잡음') { toast(`약속 날짜를 다음 ${kind === 'ceo' ? '미팅일' : '연락일'}에 적어 주세요.`); (kind === 'ceo' ? editCeo : editCustomer)(id); return; }
   toast(c.cstatus === '부재' ? '부재 기록 · 내일 다시 연락으로 잡았어요.' : c.cstatus === '미연락' ? '연락 상태를 지웠어요.' : `${c.cstatus}(으)로 기록했습니다.`);
-  showCustomer(id);
+  SHOW[kind](id);
+}
+// 위쪽 미연락·부재·약속·전체 칸 (누르면 그 사람만 보기, 한 번 더 누르면 전체)
+const statF = {c: '', ceo: ''};
+const cst = c => c.cstatus || '미연락';
+function statBoxes(kind, arr, rerender) {
+  return [['미연락', '미연락'], ['부재', '부재'], ['약속', '약속잡음'], ['전체', '']].map(([k, v]) =>
+    `<div class="stat${statF[kind] === v && v ? ' on' : ''}" style="padding:9px 10px;cursor:pointer" onclick="statF['${kind}']=statF['${kind}']==='${v}'?'':'${v}';${rerender}()"><small>${k}</small><b style="font-size:19px">${v ? arr.filter(c => cst(c) === v).length : arr.length}</b></div>`).join('');
 }
 function showCustomer(id) {
   const c = db.customers.find(x => x.id === id); if (!c) return;
@@ -2049,7 +2054,7 @@ function showCustomer(id) {
     ['가족', c.family], ['다음 연락', c.next && `${c.next} ${c.nextTodo || ''}`], ['메모', c.memo]];
   openSheet(c.name + ' 고객', `
     ${contactRow(c.phone)}
-    <div class="call-btns" style="margin-bottom:12px">${['부재', '통화완료', '약속잡음', '보류', '거절'].map(r => `<button class="btn sec${c.cstatus === r ? ' on' : ''}" onclick="custCallResult('${c.id}','${r}')">${{'부재': '📵 부재', '통화완료': '☎️ 통화완료', '약속잡음': '📅 약속잡음', '보류': '⏸ 보류', '거절': '🙅 거절'}[r]}</button>`).join('')}</div>
+    ${callBtns('c', c)}
     ${starToggleBtn('c', c)}${infoCard(info)}${templateCard('c', c)}
     ${logsHtml(c, 'c')}
     <div class="row"><button class="btn sec grow" onclick="editCustomer('${c.id}')">수정</button><button class="btn danger" onclick="removeItem('customers','${c.id}')">삭제</button></div>`);
@@ -2557,7 +2562,8 @@ const CEO_FIELDS = [
   {k: 'phone', label: '연락처', type: 'tel'},
   {k: 'industry', label: '업종', ph: '예: 제조업'},
   {k: 'staff', label: '직원 수', type: 'number'},
-  {k: 'next', label: '다음 미팅일', type: 'date'},
+  {k: 'cstatus', label: '연락 상태', type: 'select', options: DB_STATUS, def: '미연락'},
+  {k: 'next', label: '다음 미팅일 (약속 날짜)', type: 'date'},
   {k: 'nextTodo', label: '다음에 할 일'},
   {k: 'issues', label: '관심 이슈', type: 'checks', options: CEO_ISSUES, full: true},
   {k: 'memo', label: '메모', type: 'textarea', full: true},
@@ -2565,13 +2571,14 @@ const CEO_FIELDS = [
 function renderCeos() {
   const q = $('ceoSearch').value.trim().toLowerCase();
   setStarFilterBtn('ceoStarBtn', starOnly.ceo);
-  const list = db.ceos.filter(c => (!starOnly.ceo || c.star) && (!q || [c.company, c.boss, c.industry, c.memo].join(' ').toLowerCase().includes(q)))
+  $('ceoStats').innerHTML = statBoxes('ceo', db.ceos, 'renderCeos');
+  const list = db.ceos.filter(c => (!statF.ceo || cst(c) === statF.ceo) && (!starOnly.ceo || c.star) && (!q || [c.company, c.boss, c.industry, c.memo].join(' ').toLowerCase().includes(q)))
     .sort((a, b) => !!b.star - !!a.star || (a.next || '9999').localeCompare(b.next || '9999'));
   $('ceoList').innerHTML = list.length ? list.map(c => `
     <li class="item" onclick="showCeo('${c.id}')">
       <div class="avatar">🏢</div>
       <div class="body"><div class="name">${esc(c.company)} <span class="muted">${esc(c.boss || '')}</span></div>
-      <div class="meta">${esc([(c.issues || []).join(', '), c.next && '미팅 ' + c.next].filter(Boolean).join(' · '))}</div></div>${prosBtn('ceo', c)}${starBtn('ceo', c)}</li>`).join('')
+      <div class="meta">${esc([(c.issues || []).join(', '), c.next && '미팅 ' + c.next].filter(Boolean).join(' · '))}</div></div>${c.cstatus && c.cstatus !== '미연락' ? dbTag(c.cstatus) : ''}${prosBtn('ceo', c)}${starBtn('ceo', c)}</li>`).join('')
     : `<li class="empty">${!db.ceos.length ? '법인(CEO) 고객을 등록해 보세요.' : starOnly.ceo ? '⭐ 중요고객이 없습니다.' : '검색 결과가 없습니다.'}</li>`;
 }
 function editCeo(id) {
@@ -2590,10 +2597,10 @@ function saveCeo(id) {
 }
 function showCeo(id) {
   const c = db.ceos.find(x => x.id === id); if (!c) return;
-  const info = [['대표자', c.boss], ['연락처', c.phone], ['업종', c.industry], ['직원 수', c.staff && c.staff + '명'],
+  const info = [['대표자', c.boss], ['연락처', c.phone], ['연락 상태', c.cstatus && c.cstatus !== '미연락' && c.cstatus], ['업종', c.industry], ['직원 수', c.staff && c.staff + '명'],
     ['관심 이슈', (c.issues || []).join(', ')], ['다음 미팅', c.next && `${c.next} ${c.nextTodo || ''}`], ['메모', c.memo]];
   openSheet(c.company, `
-    ${contactRow(c.phone)}${starToggleBtn('ceo', c)}${infoCard(info)}${templateCard('ceo', c)}
+    ${contactRow(c.phone)}${callBtns('ceo', c)}${starToggleBtn('ceo', c)}${infoCard(info)}${templateCard('ceo', c)}
     ${logsHtml(c, 'ceo')}
     <div class="row"><button class="btn sec grow" onclick="editCeo('${c.id}')">수정</button><button class="btn danger" onclick="removeItem('ceos','${c.id}')">삭제</button></div>`);
 }
