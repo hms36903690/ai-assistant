@@ -444,7 +444,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-194';
+const APP_VERSION = '2026.11.17-195';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -774,10 +774,18 @@ function togglePros(kind, id) {
 const starToggleBtn = (kind, p) => `<button class="btn sec${p.star ? ' on' : ''}" style="width:100%;margin-bottom:12px" onclick="toggleStar('${kind}','${p.id}',true)">${p.star ? '★ 중요고객 (누르면 해제)' : '☆ 중요고객으로 표시'}</button>`;
 const contactRow = phone => phone ? `<div class="row" style="margin-bottom:12px"><a class="btn grow" href="${telHref(phone)}" style="text-align:center;text-decoration:none">📞 전화</a><a class="btn sec grow" href="${smsHref(phone)}" style="text-align:center;text-decoration:none">💬 문자</a></div>` : '';
 const infoCard = rows => `<div class="card">${rows.filter(r => r[1]).map(([k, v]) => `<div style="margin-bottom:6px"><span class="muted">${k}</span><br>${esc(v).replace(/\n/g, '<br>')}</div>`).join('') || '<span class="muted">입력된 정보가 없습니다.</span>'}</div>`;
+// ✨ 상담 문구: 고객·관심·가망·CEO 문구를 누구에게나 다 쓸 수 있게 (그 사람 종류 문구가 맨 위), 누르면 바로 아래에 만든 문구가 보임
+const TPL_GROUPS = [['c', '👥 고객용'], ['d', '📥 관심고객용'], ['p', '🌱 가망고객용'], ['ceo', '🏢 CEO용']];
 const templateCard = (kind, p) => `<div class="card"><h3>✨ 상담 문구 만들기</h3>
-  <div class="ai-buttons">${Object.keys(TEMPLATES[kind]).map(k => `<button class="btn sec" onclick="makeText('${kind}','${p.id}','${k}')">${k}</button>`).join('')}</div>
-  <textarea id="aiOut" placeholder="위 버튼을 누르면 문구가 만들어집니다. 자유롭게 고쳐서 쓰세요."></textarea>
-  <div class="row" style="margin-top:8px"><button class="btn grow" onclick="copyText($('aiOut').value)">복사하기</button></div></div>`;
+  <div id="aiOutWrap" style="display:none;margin-bottom:12px;padding:10px;border:2px solid #102a43;border-radius:12px;background:#f8fafc">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b id="aiOutTitle">만든 문구</b><span class="muted" style="font-size:12px">고쳐서 써도 돼요</span></div>
+    <textarea id="aiOut" style="min-height:120px" oninput="aiOutFit()"></textarea>
+    <div class="row" style="margin-top:8px"><button class="btn grow" onclick="copyText($('aiOut').value)">📋 복사하기</button>${p.phone ? `<button class="btn sec grow" onclick="location.href=smsBodyHref('${esc(p.phone)}',$('aiOut').value)">💬 문자로 보내기</button>` : ''}</div>
+  </div>
+  ${[...TPL_GROUPS.filter(g => g[0] === kind), ...TPL_GROUPS.filter(g => g[0] !== kind)].map(([g, lb]) =>
+    `<div class="muted" style="font-size:13px;margin:6px 0 4px">${lb}</div><div class="ai-buttons">${Object.keys(TEMPLATES[g]).map(k =>
+      `<button class="btn sec" onclick="makeText('${kind}','${p.id}','${esc(k)}','${g}')">${esc(k)}</button>`).join('')}</div>`).join('')}
+</div>`;
 
 /* ───────── ✏️ 내가 적는 할 일 ───────── */
 // 오늘(과 지난날 못 한) 할 일을 보여 주고, 완료한 일은 그날만 줄 그어 보여 줍니다
@@ -1941,6 +1949,7 @@ const seasonOf = m => m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' 
 // 다가오는 생일에 맞는 만 나이
 const bdayAge = c => Number(nextBirthday(c.birth).slice(0, 4)) - Number(c.birth.slice(0, 4));
 function bdayText(c, shift = 0) {
+  if (!c.birth) return `${c.name}님, 생일 진심으로 축하드려요 🎂\n늘 건강하시고 행복한 일만 가득하시길 바랍니다.\n\n` + (db.settings.signature || '삼성생명 FC 현미숙 드림');
   const nb = nextBirthday(c.birth), turning = bdayAge(c);
   const list = BDAY_TEMPLATES[seasonOf(Number(c.birth.slice(5, 7)))];
   // 고객·해마다 다른 문구가 나오도록 고르고, '다른 문구'를 누르면 다음 문구로
@@ -2135,9 +2144,19 @@ const DB_TEMPLATES = {
   '상담 감사': p => `${p.name}님, 오늘 시간 내주셔서 감사합니다.\n말씀 나눈 내용 정리해서 다시 안내드리겠습니다. 궁금하신 점은 언제든 연락 주세요.\n- ${db.settings.fcName}`,
 };
 const TEMPLATES = {c: CUST_TEMPLATES, ceo: CEO_TEMPLATES, p: PROS_TEMPLATES, d: DB_TEMPLATES};
-function makeText(kind, id, key) {
-  $('aiOut').value = TEMPLATES[kind][key](findPerson(kind, id));
+function makeText(kind, id, key, group = kind) {
+  const p = findPerson(kind, id);
+  // 다른 종류 문구도 쓸 수 있게 이름·회사·대표 칸을 서로 채워 줌
+  const nm = p.name || p.boss || p.company || '';
+  const v = {...p, name: nm, company: p.company || '회사', boss: p.boss || (kind === 'ceo' ? '' : nm)};
+  let text = '';
+  try { text = TEMPLATES[group][key](v); } catch (e) { text = ''; }
+  if (!text) text = `${nm}님, 안녕하세요. ${db.settings.fcName}입니다.`;
+  $('aiOutWrap').style.display = ''; $('aiOutTitle').textContent = '✨ ' + key;
+  $('aiOut').value = text; aiOutFit();
+  $('aiOutWrap').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
+function aiOutFit() { const t = $('aiOut'); t.style.height = 'auto'; t.style.height = Math.max(120, t.scrollHeight + 4) + 'px'; }
 
 /* ───────── 📚 교육 일정 ───────── */
 const EDU_FIELDS = [
