@@ -5,5 +5,19 @@ service cloud.firestore {
     match /hmsfc/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+    // 상담 신청 페이지가 신청 내용을 암호화할 때 쓰는 '공개키' (누구나 읽기, 본인만 쓰기)
+    match /hmsfc_pub/{uid} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+    // 상담 신청 받은편지함: 고객은 '암호화된 신청서 넣기'만 가능, 읽기·지우기는 FC 본인만
+    match /hmsfc_in/{uid}/leads/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['ek', 'iv', 'ct', 'v', 'at'])
+        && request.resource.data.ek is string && request.resource.data.ek.size() < 1000
+        && request.resource.data.iv is string && request.resource.data.iv.size() < 40
+        && request.resource.data.ct is string && request.resource.data.ct.size() < 6000
+        && request.resource.data.v is int && request.resource.data.at is int;
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+    }
   }
 }

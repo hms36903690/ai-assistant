@@ -282,6 +282,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
   <!-- 홈 -->
   <section class="page" id="page-home">
     <div class="hero"><h2 id="helloText" onclick="editSlogan()" title="눌러서 슬로건 고치기" style="cursor:pointer"></h2><div class="quote" id="quoteText" onclick="quoteShift++;renderQuote()" title="누르면 다른 말 보기"></div><p id="todayText"></p></div>
+    <div id="newLeadNotice"></div>
     <div id="backupNotice"></div>
     <div class="card" id="routineCard"></div>
     <div class="card" id="bdayCard" style="display:none"></div>
@@ -517,7 +518,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-214';
+const APP_VERSION = '2026.11.17-215';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -1797,6 +1798,8 @@ function renderHome() {
   renderQuote();
   $('todayText').textContent = now.toLocaleDateString('ko-KR', {year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
 
+  const newLeads = db.dbleads.filter(d => d.isNew);
+  $('newLeadNotice').innerHTML = newLeads.length ? `<div class="notice" style="background:#eef7f2;border-color:#4caf50;color:#0d3b2e;cursor:pointer" onclick="location.hash='dbleads'">🔔 <b>새 상담 신청 ${newLeads.length}건</b> — ${newLeads.slice(0, 3).map(d => esc(d.name)).join(', ')}${newLeads.length > 3 ? ' 외' : ''} <b>›</b></div>` : '';
   const lb = db.settings.lastBackup, total = db.customers.length + db.ceos.length;
   const hasData = total + db.prospects.length + db.dbleads.length;
   $('backupNotice').innerHTML = hasData && (!lb || dayDiff(lb, today()) >= 14)
@@ -2457,7 +2460,7 @@ function renderDb() {
     <li class="month-head" id="dbm-${m}"><b>📅 ${mLabel(m)}</b><span class="tag">${groups[m].length + converted(m)}명</span><span class="muted">${summary(m, groups[m])}</span></li>
     ${groups[m].map(d => personItem('d', d,
       esc([d.phone, d.interest, d.received && '받은 날 ' + d.received.slice(5).replace('-', '/'), d.calls && '통화 ' + d.calls + '회', d.next && '다음 ' + d.next.slice(5).replace('-', '/')].filter(Boolean).join(' · ')),
-      dbTag(d.status) + prosBtn('d', d) + starBtn('d', d))).join('')}`).join('')
+      (d.isNew ? '<span class="tag" style="background:#e8f6ec;color:#1e7b34">NEW</span>' : '') + dbTag(d.status) + prosBtn('d', d) + starBtn('d', d))).join('')}`).join('')
     : (db.dbleads.length ? '<li class="empty">해당하는 관심고객이 없습니다.</li>' : '');
 }
 // 같은 전화번호의 관심고객이 이미 있으면 새로 만들지 않고 그 사람 창을 엶
@@ -2482,6 +2485,7 @@ function saveDb(id) {
 }
 function showDb(id) {
   const d = db.dbleads.find(x => x.id === id); if (!d) return;
+  if (d.isNew) { d.isNew = false; save(); }
   openSheet(d.name + ' (관심고객)', `
     ${contactRow(d.phone)}${starToggleBtn('d', d)}
     <div class="muted" style="margin-bottom:6px">통화 결과를 누르면 상태와 상담 기록이 자동으로 남습니다. (통화 시도 ${d.calls || 0}회)</div>
@@ -3052,7 +3056,7 @@ function flyerPoints(f) {
 function flyerPrint(fid) {
   db.settings.flyerReviewNo = $('flNo').value.trim(); save();
   const digits = String(db.settings.applyPhone).replace(/\D/g, '');
-  const url = new URL(`apply.html?to=${digits}&ch=${encodeURIComponent('방문 안내문')}`, location.href.split('#')[0].replace(/[?].*$/, '')).href;
+  const url = new URL(`apply.html?${db.settings.inboxOn && db.settings.inboxUid ? 'u=' + db.settings.inboxUid + '&' : ''}to=${digits}&ch=${encodeURIComponent('방문 안내문')}`, location.href.split('#')[0].replace(/[?].*$/, '')).href;
   const to = $('flTo').value.trim() || '대표님', pts = $('flPts').value.split('\n').map(x => x.trim()).filter(Boolean), no = db.settings.flyerReviewNo;
   loadQr().then(Q => { const q = Q(0, 'M'); q.addData(url); q.make(); return q.createDataURL(8, 2); }).catch(() => '').then(qr => {
     const e = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
@@ -3231,7 +3235,13 @@ function renderPipe() {
 // 🔳 상담 신청 페이지: 받을 번호 + 유입 채널 → 링크·QR
 function applyLinkOpen() {
   const ph = db.settings.applyPhone || '';
-  openSheet('🔳 상담 신청 페이지', `<p class="muted" style="margin-top:0">고객이 링크(또는 QR)를 열어 신청하면, 고객 휴대폰 문자로 <b>내 번호</b>에 신청 내용이 와요. 신청 내용은 어디에도 따로 저장되지 않아요.</p>
+  const auto = db.settings.inboxOn && db.settings.inboxUid;
+  openSheet('🔳 상담 신청 페이지', `<div class="card" style="margin-top:0;${auto ? 'background:#eef7f2;border-color:#b6cfc4' : ''}">
+      <b>📨 자동 접수 ${auto ? '켜짐 ✅' : '꺼짐'}</b>
+      <p class="muted" style="margin:4px 0 8px;font-size:13px">${auto ? `고객이 신청하면 암호화되어 바로 접수되고, 앱을 열면 <b>관심고객</b>에 자동으로 들어와요.${INBOX.last ? ' (마지막 확인 ' + INBOX.last + ')' : ''}${INBOX.err ? '<br>⚠️ ' + esc(INBOX.err) : ''}`
+        : '켜면 고객이 신청하자마자 관심고객에 자동으로 들어와요. (동기화가 켜져 있어야 하고, Firebase 보안 규칙을 한 번 바꿔야 해요) 꺼져 있으면 고객 휴대폰 문자로 받아요.'}</p>
+      <div class="row" style="gap:8px">${auto ? '<button class="btn sec grow" onclick="inboxCheck(true)">🔄 지금 확인</button>' : '<button class="btn hms-btn grow" onclick="inboxEnable()">📨 자동 접수 켜기</button>'}</div></div>
+    <p class="muted" style="margin-top:10px">고객이 링크(또는 QR)를 열어 신청해요. ${auto ? '자동 접수가 안 될 때는 고객 휴대폰 문자로 <b>내 번호</b>에 와요(예비).' : '고객 휴대폰 문자로 <b>내 번호</b>에 신청 내용이 와요.'}</p>
     <div class="formgrid">
       <div><label>신청을 받을 내 휴대폰 번호</label><input id="apPh" type="tel" inputmode="tel" value="${esc(ph)}" placeholder="010-0000-0000" oninput="phoneInput(this)"></div>
       <div><label>유입 채널 (어디에 올릴 링크인지)</label><select id="apCh">${APPLY_CHANNELS.map(c => `<option>${c}</option>`).join('')}</select></div>
@@ -3247,7 +3257,7 @@ async function applyMake() {
   const digits = $('apPh').value.replace(/\D/g, '');
   if (!/^01\d{8,9}$/.test(digits)) return toast('휴대폰 번호를 정확히 적어 주세요.');
   db.settings.applyPhone = phoneVal(digits); save();
-  const url = new URL(`apply.html?to=${digits}&ch=${encodeURIComponent($('apCh').value)}`, location.href.split('#')[0].replace(/[?].*$/, '')).href;
+  const url = new URL(`apply.html?${db.settings.inboxOn && db.settings.inboxUid ? 'u=' + db.settings.inboxUid + '&' : ''}to=${digits}&ch=${encodeURIComponent($('apCh').value)}`, location.href.split('#')[0].replace(/[?].*$/, '')).href;
   let img = '';
   try { const q = (await loadQr())(0, 'M'); q.addData(url); q.make(); img = q.createDataURL(6, 3); } catch (e) {}
   $('apOut').innerHTML = `<div class="card" style="text-align:center">
@@ -3260,7 +3270,7 @@ async function applyMake() {
 function parseApply(t) {
   t = String(t || ''); if (!/상담신청/.test(t)) return null;
   const g = k => ((t.match(new RegExp('^\\s*' + k + '\\s*[:：]\\s*(.+)$', 'm')) || [])[1] || '').trim();
-  const o = {name: g('성함'), phone: phoneVal(g('연락처').replace(/[^\d-]/g, '')), ind: g('업종'), topic: g('상담'), time: g('희망시간'), q: g('문의'), ch: g('유입'), agree: g('개인정보 수집·이용 동의'), ad: g('광고성 정보 수신')};
+  const o = {name: g('성함'), phone: phoneVal(g('연락처').replace(/[^\d-]/g, '')), ind: g('업종'), region: g('지역'), topic: g('상담'), time: g('희망시간'), q: g('문의'), ch: g('유입'), agree: g('개인정보 수집·이용 동의'), ad: g('광고성 정보 수신')};
   return o.name || o.phone ? o : null;
 }
 function inquiryOpen(prefill) {
@@ -3274,18 +3284,76 @@ function inquiryPreview() {
   const o = parseApply($('iqTxt').value);
   $('iqPrev').innerHTML = o ? `<div class="card" style="font-size:14px">👤 <b>${esc(o.name)}</b> ${esc(o.phone)}<br>${esc([o.ind, o.topic, o.time && '희망 ' + o.time, o.ch && '유입 ' + o.ch].filter(Boolean).join(' · '))}<br><span class="muted">개인정보 동의: ${esc(o.agree || '기록 없음')} · 광고 수신: ${esc(o.ad || '-')}</span></div>` : '<span class="muted">아직 [상담신청] 내용을 못 찾았어요.</span>';
 }
+// 상담 신청 한 건 → 관심고객 (자동 접수·문자 붙여넣기·공유 모두 여기로). 같은 번호면 새로 만들지 않고 메모에 '다시 신청' 추가
+function addApplyLead(o, isNew) {
+  const digits = String(o.phone || '').replace(/\D/g, ''), old = digits && db.dbleads.find(x => String(x.phone || '').replace(/\D/g, '') === digits);
+  const lines = [o.ind && '업종: ' + o.ind, o.region && '사업 지역: ' + o.region, o.time && '연락 가능 시간: ' + o.time, o.q && '문의: ' + o.q,
+    '개인정보 수집·이용 동의: ' + (o.agree || '기록 없음'), '마케팅 정보 수신: ' + (o.ad || '기록 없음')].filter(Boolean);
+  if (old) { old.memo = [old.memo, `[${today()} 다시 상담 신청 · ${o.ch || ''} · ${o.topic || ''}]`, ...lines].filter(Boolean).join('\n'); if (isNew) old.isNew = true; return {id: old.id, dup: true}; }
+  const id = uid();
+  db.dbleads.push({id, created: today(), received: o.day || today(), calls: 0, logs: [], status: '미연락', name: o.name || o.phone, phone: phoneVal(o.phone || ''),
+    source: '상담신청·' + (o.ch || '상담 신청 페이지'), interest: o.topic, isNew: !!isNew, memo: ['[상담 신청 페이지로 접수]', ...lines].join('\n')});
+  return {id, dup: false};
+}
 function inquirySave(text) {
   const o = parseApply(text ?? $('iqTxt').value);
   if (!o) return toast('[상담신청] 문자 내용을 붙여넣어 주세요.');
-  if (o.phone && dbDupOpen(o.phone)) return;
-  const id = uid();
-  db.dbleads.push({id, created: today(), received: today(), calls: 0, logs: [], status: '미연락', name: o.name || o.phone, phone: o.phone,
-    source: '상담신청·' + (o.ch || '상담 신청 페이지'), interest: o.topic,
-    memo: ['[상담 신청 페이지로 접수]', o.ind && '업종: ' + o.ind, o.time && '연락 희망 시간: ' + o.time, o.q && '문의: ' + o.q,
-      '개인정보 수집·이용 동의: ' + (o.agree || '기록 없음'), '광고성 정보 수신: ' + (o.ad || '기록 없음')].filter(Boolean).join('\n')});
+  const {id, dup} = addApplyLead(o);
   save(); location.hash = 'dbleads'; refresh(); editDb(id);
-  toast('📥 관심고객으로 접수했어요. 희망 시간에 연락해 주세요.');
+  toast(dup ? '이미 있는 관심고객이에요. 다시 신청한 내용을 메모에 붙였어요.' : '📥 관심고객으로 접수했어요. 희망 시간에 연락해 주세요.');
 }
+/* ── 📨 상담 신청 자동 접수 (무료 Firebase '받은편지함')
+   고객이 apply.html?u=…로 신청 → 신청 내용을 FC 공개키로 암호화해 hmsfc_in/{uid}/leads에 넣음(고객은 읽을 수 없음)
+   → 이 앱이 열려 있거나 열릴 때(그리고 2분마다) 가져와 풀어서 관심고객에 넣고 받은편지함에서 지움.
+   개인키는 설정(암호화 동기화)에만 있어서 FC 기기에서만 풀 수 있음. 앱이 완전히 닫혀 있을 때 휴대폰 푸시 알림은 유료 서버가 필요해 미완성 */
+const INBOX = {busy: false, err: '', last: ''};
+const unb64s = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function inboxKeys() {
+  if (db.settings.inboxKey) return db.settings.inboxKey;
+  const kp = await crypto.subtle.generateKey({name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256'}, true, ['encrypt', 'decrypt']);
+  db.settings.inboxKey = {pub: b64(await crypto.subtle.exportKey('spki', kp.publicKey)), priv: await crypto.subtle.exportKey('jwk', kp.privateKey)};
+  save(); return db.settings.inboxKey;
+}
+async function inboxDecrypt(d) {
+  const priv = await crypto.subtle.importKey('jwk', db.settings.inboxKey.priv, {name: 'RSA-OAEP', hash: 'SHA-256'}, false, ['decrypt']);
+  const raw = await crypto.subtle.decrypt({name: 'RSA-OAEP'}, priv, unb64s(d.ek));
+  const aes = await crypto.subtle.importKey('raw', raw, {name: 'AES-GCM'}, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name: 'AES-GCM', iv: unb64s(d.iv)}, aes, unb64s(d.ct))));
+}
+async function inboxEnable() {
+  if (!SYNC.on || !SYNC.user) return alert('먼저 ⚙️ 설정에서 [핸드폰·태블릿 동기화]를 켜 주세요.\n자동 접수는 동기화 계정(무료 Firebase)으로 받아요.');
+  try {
+    const k = await inboxKeys();
+    await firebase.firestore().collection('hmsfc_pub').doc(SYNC.user.uid).set({pk: k.pub, fc: db.settings.fcName, at: Date.now()});
+    db.settings.inboxOn = true; db.settings.inboxUid = SYNC.user.uid; save();
+    if (window.Notification && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+    toast('📨 자동 접수를 켰어요. 새 링크·QR을 만들어 쓰세요.'); applyLinkOpen(); inboxCheck(true);
+  } catch (e) { alert('자동 접수를 켜지 못했어요.\n' + (e.message || e) + '\n\nFirebase 보안 규칙을 새로 바꿔야 해요. (안내 참고)'); }
+}
+async function inboxCheck(manual) {
+  if (!db.settings.inboxOn || !db.settings.inboxKey || !SYNC.on || !SYNC.user || INBOX.busy) return;
+  INBOX.busy = true;
+  try {
+    const snap = await firebase.firestore().collection('hmsfc_in').doc(SYNC.user.uid).collection('leads').get();
+    let n = 0;
+    for (const doc of snap.docs) {
+      try { const o = await inboxDecrypt(doc.data()); addApplyLead(o, true); n++; } catch (e) {}
+      try { await doc.ref.delete(); } catch (e) {}
+    }
+    INBOX.err = ''; INBOX.last = new Date().toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'});
+    if (n) { save(); refresh(); inboxNotify(n); } else if (manual) toast('새 상담 신청이 없어요.');
+  } catch (e) { INBOX.err = e.message || String(e); if (manual) toast('받은편지함을 확인하지 못했어요: ' + INBOX.err); }
+  finally { INBOX.busy = false; }
+}
+function inboxNotify(n) {
+  toast(`🔔 새 상담 신청 ${n}건이 들어왔어요!`);
+  try {
+    if (window.Notification && Notification.permission === 'granted' && navigator.serviceWorker)
+      navigator.serviceWorker.ready.then(r => r.showNotification('🔔 새 상담 신청', {body: `${n}건이 관심고객에 들어왔어요.`, icon: 'icon-192.png', tag: 'hmsfc-lead'}));
+  } catch (e) {}
+}
+setInterval(() => { if (!document.hidden) inboxCheck(); }, 120000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(inboxCheck, 1500); });
 // 📈 유입 성과 분석: 채널별 문의 → 상담 → 계약
 function funnelOpen() {
   const rows = {};
@@ -3692,7 +3760,7 @@ async function startSync() {
   try {
     const snap = await docRef().get();
     if (snap.exists) await applyRemote(snap.data()); else await pushNow();
-    startListening();
+    startListening(); setTimeout(inboxCheck, 1000);
   } catch (e) { setSyncState('동기화 실패: ' + (e.message || e)); }
   return true;
 }

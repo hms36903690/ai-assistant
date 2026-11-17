@@ -4,18 +4,27 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>보험 상담 신청 · HMS PREMIUM</title>
+<title>삼성생명 FC 현미숙 · 무료 상담 신청</title>
 <style>
   :root{--g:#0d3b2e;--g2:#14523f;--gold:#b89b5e;--gold2:#d4b46a;--ink:#1f2933;--sub:#616e7c;--line:#d9dee3;--bg:#f6f5f0}
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
-  .wrap{max-width:560px;margin:0 auto;padding:16px 16px 40px}
-  .hero{background:linear-gradient(135deg,var(--g),var(--g2));color:#f3ead2;border-radius:18px;padding:20px;border:1px solid var(--gold)}
+  body{margin:0;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
+  .wrap{max-width:600px;margin:0 auto;padding:16px 16px 40px}
+  .hero{background:linear-gradient(135deg,var(--g),var(--g2));color:#f3ead2;border-radius:20px;padding:24px 20px;border:1px solid var(--gold)}
   .brand{font-size:12px;letter-spacing:4px;color:var(--gold2);font-weight:800}
-  .hero h1{margin:4px 0 4px;font-size:23px}
-  .hero p{margin:0;font-size:14px;opacity:.9}
+  .hero h1{margin:6px 0 6px;font-size:25px;line-height:1.35}
+  .hero p{margin:0;font-size:15px;opacity:.92}
+  .badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .badges span{font-size:12px;border:1px solid rgba(212,180,106,.7);color:#f3ead2;border-radius:999px;padding:3px 10px}
+  .cta{display:block;text-align:center;margin-top:16px;padding:14px;border-radius:999px;background:var(--gold2);color:#0d3b2e;font-weight:900;text-decoration:none;font-size:17px}
   .card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:16px;padding:18px;margin-top:14px}
   h2{font-size:20px;margin:0 0 10px}
+  .svc{display:grid;gap:10px}
+  .svc div{border:1px solid #e8e1cc;background:#fbfaf6;border-radius:12px;padding:12px}
+  .svc b{display:block;font-size:16px;color:var(--g)}
+  .svc small{color:var(--sub);font-size:14px}
+  .profile{display:flex;gap:14px;align-items:center}
+  .avatar{flex:none;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--g),var(--g2));color:var(--gold2);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;border:2px solid var(--gold)}
   label{display:block;font-size:15px;color:var(--sub);margin:14px 0 6px}
   select,input[type=text],input[type=tel],textarea{width:100%;font:inherit;font-size:16px;padding:13px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink)}
   textarea{border-radius:14px;min-height:80px;resize:vertical}
@@ -25,7 +34,8 @@
   .agree{background:#f8f7f2;border:1px solid #e8e1cc;border-radius:12px;padding:12px;font-size:13px;color:#4b5563;margin-top:16px}
   .agree b{color:var(--ink)}
   .chk{display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:15px;color:var(--ink)}
-  .btn{display:block;width:100%;margin-top:18px;padding:16px;font:inherit;font-size:18px;font-weight:800;border-radius:999px;border:1px solid var(--gold);background:var(--g);color:#f3ead2}
+  .btn{display:block;width:100%;margin-top:18px;padding:16px;font:inherit;font-size:18px;font-weight:800;border-radius:999px;border:1px solid var(--gold);background:var(--g);color:#f3ead2;cursor:pointer}
+  .btn:disabled{opacity:.6}
   .err{color:#b42318;font-size:14px;margin-top:10px;min-height:20px}
   .done{text-align:center}
   .muted{color:var(--sub);font-size:13px}
@@ -33,70 +43,119 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="hero"><div class="brand">HMS PREMIUM</div><h1>보험 상담 신청</h1><p id="who">현미숙 FC가 직접 연락드려요. 부담 없이 신청해 주세요.</p></div>
+  <div class="hero">
+    <div class="brand">HMS PREMIUM</div>
+    <h1>사장님의 사업과 가족,<br>30년 경험으로 함께 지키겠습니다</h1>
+    <p>삼성생명 FC 현미숙 · 개인사업자·자영업자 전문 상담</p>
+    <div class="badges"><span>보험 상담 30년</span><span>개인사업자·자영업자</span><span>CEO 보장·재무 컨설팅</span></div>
+    <a class="cta" href="#form">무료 상담 신청하기 ↓</a>
+  </div>
 
-  <div class="card" id="formCard">
-    <h2>상담 신청</h2>
-    <label for="ind">사업 업종</label>
-    <select id="ind"><option>음식점·카페</option><option>숙박·펜션</option><option>소매·유통</option><option>병의원·약국</option><option>전문서비스(법무·세무·부동산)</option><option>교육·학원</option><option>미용·생활서비스</option><option>자동차</option><option>법인 회사</option><option>직장인·개인</option><option>기타</option></select>
-    <label for="topic">상담받고 싶은 내용</label>
-    <select id="topic"><option>기존 보험 점검</option><option>사업장 화재·배상책임</option><option>건강·암·실손 보장</option><option>종신·사망 보장</option><option>연금·노후 준비</option><option>자녀·태아 보험</option><option>법인·CEO 컨설팅</option><option>기타</option></select>
+  <div class="card">
+    <div class="profile"><div class="avatar">HMS</div>
+      <div><b style="font-size:18px">삼성생명 FC 현미숙</b><br><span class="muted" style="font-size:14px">30년 동안 고객 곁에서 보험을 상담해 왔어요. 사장님 상황에 꼭 필요한 것만, 쉽고 정직하게 설명드릴게요.</span></div></div>
+  </div>
+
+  <div class="card">
+    <h2>이런 분께 도움을 드려요</h2>
+    <div class="svc">
+      <div><b>🏪 개인사업자 상담</b><small>사장님이 아프시거나 다치시면 가게도 멈춰요. 소득과 가족을 지키는 보장을 함께 점검해요.</small></div>
+      <div><b>☕ 자영업자 보장 점검</b><small>식당·카페·미용실·네일숍 등 업종별로 화재·배상책임과 대표님 건강 보장을 살펴봐요.</small></div>
+      <div><b>🏢 CEO 상담</b><small>법인 대표님의 유고 대비, 퇴직금 재원, 가업승계 준비를 세무 전문가와 함께 고민해요.</small></div>
+    </div>
+    <p class="muted" style="margin:10px 0 0">상담은 무료이고, 상담을 받으셨다고 가입하셔야 하는 건 아니에요.</p>
+  </div>
+
+  <div class="card" id="form">
+    <h2>무료 상담 신청</h2>
     <label for="nm">성함</label>
     <input type="text" id="nm" placeholder="성함을 입력해 주세요" autocomplete="name">
     <label for="ph">연락처</label>
     <input type="tel" id="ph" placeholder="상담 회신을 위한 연락처" inputmode="tel" autocomplete="tel">
-    <label>연락 희망 시간</label>
-    <div class="radios"><label><input type="radio" name="tm" value="오전" checked> 오전</label><label><input type="radio" name="tm" value="오후"> 오후</label><label><input type="radio" name="tm" value="저녁"> 저녁</label></div>
+    <label for="ind">사업 업종</label>
+    <select id="ind"><option>음식점·카페</option><option>미용실·네일숍</option><option>숙박·펜션</option><option>소매·유통</option><option>병의원·약국</option><option>전문서비스(법무·세무·부동산)</option><option>교육·학원</option><option>자동차</option><option>법인 회사(CEO)</option><option>직장인·개인</option><option>기타</option></select>
+    <label for="rg">사업 지역</label>
+    <select id="rg"><option>제주시</option><option>서귀포시</option><option>애월읍</option><option>한림읍</option><option>조천읍</option><option>구좌읍</option><option>성산읍</option><option>표선면</option><option>남원읍</option><option>대정읍</option><option>안덕면</option><option>제주 외 지역</option></select>
+    <label for="topic">상담 희망 분야</label>
+    <select id="topic"><option>기존 보험 점검</option><option>사업장 화재·배상책임</option><option>대표님 건강·소득 보장</option><option>암·실손 보장</option><option>종신·사망 보장</option><option>연금·노후 준비</option><option>자녀·태아 보험</option><option>법인·CEO 컨설팅</option><option>기타</option></select>
+    <label>연락 가능 시간</label>
+    <div class="radios"><label><input type="radio" name="tm" value="오전" checked> 오전</label><label><input type="radio" name="tm" value="오후"> 오후</label><label><input type="radio" name="tm" value="저녁"> 저녁</label><label><input type="radio" name="tm" value="아무 때나"> 아무 때나</label></div>
     <label for="q">궁금한 점 (선택)</label>
     <textarea id="q" placeholder="편하게 적어 주세요"></textarea>
 
+    <!-- ※ 아래 개인정보 문구는 회사 준법감시(컴플라이언스) 검토 후 확정해 주세요 -->
     <div class="agree">
       <b>개인정보 수집·이용 안내</b><br>
       · 수집 목적: 보험 상담 신청 확인과 상담 회신<br>
-      · 수집 항목: 성함, 연락처, 업종, 상담 희망 내용, 연락 희망 시간, 궁금한 점<br>
+      · 수집 항목: 성함, 연락처, 사업 업종, 사업 지역, 상담 희망 분야, 연락 가능 시간, 궁금한 점<br>
       · 보유 기간: 상담 종료 후 1년 (또는 동의를 철회하실 때까지) 보관 후 파기<br>
       · 동의를 거부하실 수 있으며, 거부하시면 상담 신청이 접수되지 않아요.
     </div>
     <label class="chk"><input type="checkbox" id="ag1"> <span><b>[필수]</b> 개인정보 수집·이용에 동의합니다.</span></label>
-    <label class="chk"><input type="checkbox" id="ag2"> <span>[선택] 보험·이벤트 등 광고성 정보를 문자로 받겠습니다.</span></label>
+    <label class="chk"><input type="checkbox" id="ag2"> <span>[선택] 보험 상식·이벤트 등 마케팅 정보를 문자로 받겠습니다.</span></label>
     <div class="err" id="err"></div>
-    <button class="btn" id="send">상담 신청하기</button>
-    <p class="muted" style="margin:10px 0 0">신청하기를 누르면 휴대폰 문자 앱이 열려요. 내용을 확인하고 <b>[보내기]</b>를 눌러 주시면 접수돼요. 입력하신 정보는 이 페이지에 저장되지 않아요.</p>
+    <button class="btn" id="send">무료 상담 신청하기</button>
+    <p class="muted" id="howNote" style="margin:10px 0 0"></p>
   </div>
 
   <div class="card done" id="doneCard" style="display:none">
-    <h2>📩 문자 앱이 열렸어요</h2>
-    <p>문자 내용을 확인하고 <b>[보내기]</b>를 누르시면 상담 신청이 끝나요.<br>희망하신 시간에 연락드릴게요. 감사합니다!</p>
-    <button class="btn" id="again" style="background:#fff;color:var(--g)">문자 앱 다시 열기</button>
+    <h2 id="doneTitle">✅ 상담 신청이 접수됐어요</h2>
+    <p id="doneText">신청해 주셔서 감사합니다.<br>말씀하신 시간에 현미숙 FC가 직접 연락드릴게요.</p>
+    <button class="btn" id="again" style="display:none;background:#fff;color:var(--g)">문자 앱 다시 열기</button>
   </div>
-  <p class="muted" style="text-align:center;margin-top:16px">삼성생명 FC 현미숙 · HMS PREMIUM</p>
+  <p class="muted" style="text-align:center;margin-top:16px">삼성생명 FC 현미숙 · HMS PREMIUM<br>보험 가입 전 상품설명서와 약관을 꼭 읽어 보세요.</p>
 </div>
 <script>
-// 이 페이지는 아무것도 저장하지 않아요. 신청 내용은 고객 휴대폰의 문자로 FC에게 보내져요.
-// 링크 예: apply.html?to=01012345678&ch=블로그  (to = 받을 번호, ch = 유입 채널)
+// 링크 예: apply.html?u=(FC 앱 계정 번호)&to=01012345678&ch=블로그
+//  · u가 있으면: 신청 내용을 FC의 공개키로 암호화해서 Firebase '받은편지함'에 저장 → FC 앱이 열릴 때 관심고객으로 자동 접수
+//  · u가 없거나 저장이 안 되면: 고객 휴대폰 문자로 FC 번호(to)에 신청 내용을 보냄 (예비 방법)
 const P = new URLSearchParams(location.search);
-const to = (P.get('to') || '').replace(/\D/g, ''), ch = (P.get('ch') || '').slice(0, 20), fc = (P.get('n') || '').slice(0, 20);
+const U = (P.get('u') || '').replace(/[^A-Za-z0-9]/g, ''), to = (P.get('to') || '').replace(/\D/g, ''), ch = (P.get('ch') || '').slice(0, 20);
 const $ = id => document.getElementById(id);
-if (fc) $('who').textContent = `${fc}가 직접 연락드려요. 부담 없이 신청해 주세요.`;
-if (!/^01\d{8,9}$/.test(to)) {
-  $('formCard').innerHTML = '<h2>링크를 다시 확인해 주세요</h2><p>상담 신청 링크가 올바르지 않아요. 받으신 링크를 다시 눌러 주세요.</p>';
-}
+const okTo = /^01\d{8,9}$/.test(to);
+if (!U && !okTo) $('form').innerHTML = '<h2>링크를 다시 확인해 주세요</h2><p>상담 신청 링크가 올바르지 않아요. 받으신 링크를 다시 눌러 주세요.</p>';
+$('howNote').innerHTML = U ? '신청하기를 누르면 바로 접수돼요. 신청 내용은 암호화되어 현미숙 FC에게만 전달돼요.'
+  : '신청하기를 누르면 휴대폰 문자 앱이 열려요. 내용을 확인하고 <b>[보내기]</b>를 눌러 주시면 접수돼요.';
 const fmt = v => { const d = String(v).replace(/\D/g, '').slice(0, 11); return d.length === 11 ? `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}` : d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : d; };
+const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
 let smsUrl = '';
-if ($('send')) $('send').onclick = () => {
+async function saveOnline(o) {
+  const cfg = await (await fetch('sync-config.json', {cache: 'no-cache'})).json();
+  const base = `https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents`;
+  const pr = await fetch(`${base}/hmsfc_pub/${U}?key=${cfg.apiKey}`);
+  if (!pr.ok) throw new Error('pub ' + pr.status);
+  const pk = (await pr.json()).fields.pk.stringValue;
+  const pub = await crypto.subtle.importKey('spki', Uint8Array.from(atob(pk), c => c.charCodeAt(0)), {name: 'RSA-OAEP', hash: 'SHA-256'}, false, ['encrypt']);
+  const aes = await crypto.subtle.generateKey({name: 'AES-GCM', length: 256}, true, ['encrypt']);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, aes, new TextEncoder().encode(JSON.stringify(o)));
+  const ek = await crypto.subtle.encrypt({name: 'RSA-OAEP'}, pub, await crypto.subtle.exportKey('raw', aes));
+  const r = await fetch(`${base}/hmsfc_in/${U}/leads?key=${cfg.apiKey}`, {method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({fields: {ek: {stringValue: b64(ek)}, iv: {stringValue: b64(iv)}, ct: {stringValue: b64(ct)}, v: {integerValue: '1'}, at: {integerValue: String(Date.now())}}})});
+  if (!r.ok) throw new Error('save ' + r.status);
+}
+$('send') && ($('send').onclick = async () => {
   const nm = $('nm').value.trim(), ph = fmt($('ph').value);
   if (!nm) return $('err').textContent = '성함을 입력해 주세요.';
   if (!/^0\d{1,2}-\d{3,4}-\d{4}$/.test(ph)) return $('err').textContent = '연락처를 정확히 입력해 주세요. (예: 010-1234-5678)';
   if (!$('ag1').checked) return $('err').textContent = '개인정보 수집·이용에 동의해 주셔야 접수돼요.';
   $('err').textContent = '';
   const d = new Date(), day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const body = ['[상담신청]', `성함: ${nm}`, `연락처: ${ph}`, `업종: ${$('ind').value}`, `상담: ${$('topic').value}`,
-    `희망시간: ${document.querySelector('input[name=tm]:checked').value}`, $('q').value.trim() && `문의: ${$('q').value.trim().slice(0, 200)}`,
-    `유입: ${ch || '상담 신청 페이지'}`, `개인정보 수집·이용 동의: 동의 (${day})`, `광고성 정보 수신: ${$('ag2').checked ? '동의' : '미동의'}`].filter(Boolean).join('\n');
+  const o = {name: nm, phone: ph, ind: $('ind').value, region: $('rg').value, topic: $('topic').value, time: document.querySelector('input[name=tm]:checked').value,
+    q: $('q').value.trim().slice(0, 300), ch: ch || '상담 신청 페이지', agree: `동의 (${day})`, ad: $('ag2').checked ? `동의 (${day})` : '미동의', day};
+  $('send').disabled = true; $('send').textContent = '접수하고 있어요…';
+  if (U) {
+    try { await saveOnline(o); $('form').style.display = 'none'; $('doneCard').style.display = ''; $('doneCard').scrollIntoView(); return; }
+    catch (e) { if (!okTo) { $('send').disabled = false; $('send').textContent = '무료 상담 신청하기'; return $('err').textContent = '지금 접수가 잘 안 돼요. 잠시 뒤 다시 눌러 주세요.'; } }
+  }
+  const body = ['[상담신청]', `성함: ${o.name}`, `연락처: ${o.phone}`, `업종: ${o.ind}`, `지역: ${o.region}`, `상담: ${o.topic}`, `희망시간: ${o.time}`,
+    o.q && `문의: ${o.q.slice(0, 200)}`, `유입: ${o.ch}`, `개인정보 수집·이용 동의: ${o.agree}`, `광고성 정보 수신: ${o.ad}`].filter(Boolean).join('\n');
   smsUrl = `sms:${to}?&body=${encodeURIComponent(body)}`;
-  $('formCard').style.display = 'none'; $('doneCard').style.display = '';
+  $('form').style.display = 'none'; $('doneCard').style.display = ''; $('again').style.display = '';
+  $('doneTitle').textContent = '📩 문자 앱이 열렸어요';
+  $('doneText').innerHTML = '문자 내용을 확인하고 <b>[보내기]</b>를 누르시면 상담 신청이 끝나요.<br>말씀하신 시간에 연락드릴게요. 감사합니다!';
   location.href = smsUrl;
-};
+});
 $('again').onclick = () => { if (smsUrl) location.href = smsUrl; };
 </script>
 </body>
