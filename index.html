@@ -287,8 +287,9 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
   <section class="page" id="page-customers">
     <div class="toolbar">
       <input id="custSearch" placeholder="이름·연락처·메모 검색" oninput="renderCustomers()">
-      <select id="custStage" onchange="renderCustomers()" style="max-width:110px"></select>
+      <select id="custStage" onchange="renderCustomers()" style="max-width:88px"></select>
       <button class="btn sec" id="custStarBtn" onclick="starOnly.c=!starOnly.c;renderCustomers()" aria-label="중요고객만 보기">☆</button>
+      <button class="btn sec" onclick="importContacts('customers')" aria-label="연락처에서 여러 명 가져오기">📱</button>
       <button class="btn" onclick="editCustomer()">＋</button>
     </div>
     <div class="card"><ul class="list" id="custList"></ul></div>
@@ -308,9 +309,10 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
   <section class="page" id="page-dbleads">
     <div class="toolbar">
       <input id="dbSearch" placeholder="이름·연락처·내용 검색" oninput="renderDb()">
-      <select id="dbStatus" onchange="renderDb()" style="max-width:105px"></select>
+      <select id="dbStatus" onchange="renderDb()" style="max-width:84px"></select>
       <button class="btn sec" id="dbStarBtn" onclick="starOnly.d=!starOnly.d;renderDb()" aria-label="중요고객만 보기">☆</button>
       <button class="btn sec" onclick="pasteDb()" aria-label="신청서 붙여넣기">📋</button>
+      <button class="btn sec" onclick="importContacts('dbleads')" aria-label="연락처에서 여러 명 가져오기">📱</button>
       <button class="btn" onclick="editDb()">＋</button>
     </div>
     <div class="stats" id="dbStats" style="grid-template-columns:repeat(4,1fr)"></div>
@@ -322,6 +324,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
   <section class="page" id="page-contracted">
     <div class="toolbar">
       <input id="ctSearch" placeholder="이름·전화번호·상품 검색" oninput="renderContracted()">
+      <button class="btn sec" onclick="importContacts('contracted')" aria-label="연락처에서 여러 명 가져오기">📱</button>
       <button class="btn" onclick="editContracted()" aria-label="기계약자 추가">＋</button>
     </div>
     <div class="card"><ul class="list" id="ctList"></ul></div>
@@ -356,6 +359,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
     <div class="toolbar">
       <input id="prosSearch" placeholder="이름·소개자·메모 검색" oninput="renderProspects()">
       <button class="btn sec" id="prosStarBtn" onclick="starOnly.p=!starOnly.p;renderProspects()" aria-label="중요고객만 보기">☆</button>
+      <button class="btn sec" onclick="importContacts('prospects')" aria-label="연락처에서 여러 명 가져오기">📱</button>
       <button class="btn" onclick="editProspect()">＋</button>
     </div>
     <p class="muted" style="margin:0 2px 10px">아직 상담 전인 분들을 가볍게 적어 두는 곳입니다. 상담이 시작되면 <b>정식 고객으로 전환</b>을 누르세요.</p>
@@ -433,7 +437,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-160';
+const APP_VERSION = '2026.11.17-161';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: '관심고객', prospects: '가망고객', ceo: 'CEO 고객', contracted: '기계약자', cards: '삼성카드', fires: '삼성화재', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
@@ -571,7 +575,8 @@ function formHtml(fields, data) {
     else if (f.unit) input = `<div style="position:relative"><input id="f_${f.k}" type="${f.type || 'text'}" value="${v}" placeholder="${esc(f.ph || '')}"${f.type === 'number' ? ' inputmode="numeric"' : ''} style="padding-right:34px"><span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--sub)">${esc(f.unit)}</span></div>`;
     else if (f.type === 'tel') input = `<input id="f_${f.k}" type="tel" inputmode="tel" value="${v}" placeholder="${esc(f.ph || '')}" oninput="phoneInput(this)" onkeyup="phoneInput(this)" oncompositionend="phoneInput(this)" onblur="phoneInput(this)">`;
     else input = `<input id="f_${f.k}" type="${f.type || 'text'}" value="${v}" placeholder="${esc(f.ph || '')}"${f.type === 'number' ? ' inputmode="numeric"' : ''}>`;
-    return `<div class="${f.full ? 'full' : ''}"><label>${esc(f.label)}</label>${input}</div>`;
+    const lbl = f.type === 'tel' ? `<label style="display:flex;align-items:center;justify-content:space-between;gap:6px">${esc(f.label)}<button type="button" class="btn sec sm" style="padding:3px 8px;font-size:12px" onclick="pickContactOne()">📱 연락처에서</button></label>` : `<label>${esc(f.label)}</label>`;
+    return `<div class="${f.full ? 'full' : ''}">${lbl}${input}</div>`;
   }).join('') + '</div>';
 }
 // 금액 칸: 숫자만 받아 3자리마다 쉼표 (예: 150000 → 150,000), '15만'·'1억 2천만'도 알아들음
@@ -598,6 +603,48 @@ function phoneInput(el) {
   fix(); setTimeout(fix, 0);
 }
 const phoneVal = v => /^[\d\s-]+$/.test(v || '') ? fmtPhone(v) : (v || '');
+/* ───────── 📱 휴대폰 연락처에서 가져오기 (안드로이드 크롬의 연락처 고르기 기능) ─────────
+   그룹째로는 못 가져오고, 연락처 목록에서 사람을 골라야 함 (휴대폰이 개인정보 보호로 막음) */
+const contactsOk = () => 'contacts' in navigator && 'ContactsManager' in window;
+const contactNoMsg = () => alert('이 기기(또는 브라우저)에서는 연락처 가져오기를 쓸 수 없어요.\n안드로이드 휴대폰의 크롬(또는 설치한 앱)에서 해 주세요.');
+async function pickContacts(multiple) {
+  if (!contactsOk()) { contactNoMsg(); return []; }
+  try { return (await navigator.contacts.select(['name', 'tel'], {multiple})) || []; }
+  catch (e) { return []; }
+}
+const contactName = c => ((c.name || [])[0] || '').trim();
+const contactTel = c => phoneVal(((c.tel || [])[0] || '').replace(/^\+82[\s-]*/, '0'));
+// 등록 창: 한 명 골라서 이름·연락처 채우기 (CEO는 대표자 칸)
+async function pickContactOne() {
+  const [c] = await pickContacts(false); if (!c) return;
+  const nm = contactName(c), tel = contactTel(c);
+  const nameEl = $('f_name') || $('f_boss');
+  if (nameEl && nm) nameEl.value = nm;
+  if ($('f_phone') && tel) $('f_phone').value = tel;
+  toast('연락처에서 가져왔어요.');
+}
+// 목록 위 📱: 여러 명 골라서 한 번에 등록 (같은 번호가 이미 있으면 건너뜀)
+const IMPORT_TO = {
+  customers: {label: '고객', fields: () => CUST_FIELDS, extra: () => ({created: today(), logs: []})},
+  dbleads: {label: '관심고객', fields: () => DB_FIELDS, extra: () => ({created: today(), received: today(), calls: 0, logs: []})},
+  prospects: {label: '가망고객', fields: () => PROS_FIELDS, extra: () => ({created: today(), logs: []})},
+  contracted: {label: '기계약자', fields: () => CT_FIELDS, extra: () => ({created: today()})},
+};
+async function importContacts(coll) {
+  const T = IMPORT_TO[coll], list = await pickContacts(true); if (!list.length) return;
+  const digits = v => String(v || '').replace(/\D/g, ''), have = new Set(db[coll].map(x => digits(x.phone)).filter(Boolean));
+  let added = 0, skipped = 0;
+  list.forEach(c => {
+    const name = contactName(c), phone = contactTel(c);
+    if (!name && !phone) return;
+    if (phone && have.has(digits(phone))) { skipped++; return; }
+    const defs = {}; T.fields().forEach(f => { if (f.def !== undefined) defs[f.k] = f.def; });
+    db[coll].push({id: uid(), ...defs, ...T.extra(), name: name || phone, phone});
+    have.add(digits(phone)); added++;
+  });
+  save(); refresh();
+  toast(`${T.label} ${added}명을 가져왔어요.${skipped ? ` (이미 있는 ${skipped}명은 건너뜀)` : ''}`);
+}
 function moneyInput(el) {
   if (/[억만천]/.test(el.value)) return; // 한글 단위로 적는 중이면 그대로 두기
   const d = el.value.replace(/\D/g, '');
