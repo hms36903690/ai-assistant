@@ -446,8 +446,8 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-197';
-const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
+const APP_VERSION = '2026.11.17-198';
+const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
 const DB_STATUS_CLASS = {'미연락': 's-new', '부재': 's-miss', '통화완료': 's-talk', '약속잡음': 's-appt', '보류': '', '거절': 's-no'};
@@ -2003,7 +2003,7 @@ const CUST_FIELDS = [
   {k: 'name', label: '이름 *'},
   {k: 'phone', label: '연락처', type: 'tel', ph: '010-0000-0000'},
   {k: 'birth', label: '생년월일', type: 'date'},
-  {k: 'stage', label: '진행 단계', type: 'select', options: STAGES, def: '관심'},
+  {k: 'stage', label: '진행 단계', type: 'select', options: STAGES, def: '일반'},
   {k: 'product', label: '관심 상품', ph: '예: 실손, 암보험, 연금'},
   {k: 'family', label: '가족 사항', ph: '예: 배우자, 자녀 2명'},
   {k: 'cstatus', label: '연락 상태', type: 'select', options: DB_STATUS, def: '미연락'},
@@ -2346,7 +2346,7 @@ function convertDb(id) {
   if (!d || !confirm(`${d.name}님을 정식 고객으로 옮길까요?\n고객 목록으로 옮겨지고, 통화·상담 기록도 함께 옮겨집니다.`)) return;
   const birth = /^\d{4}-\d{2}-\d{2}$/.test(d.age || '') ? d.age : '';
   const c = {
-    id: uid(), created: today(), name: d.name, phone: d.phone, birth, stage: d.status === '약속잡음' ? '상담중' : '관심',
+    id: uid(), created: today(), name: d.name, phone: d.phone, birth, stage: d.status === '약속잡음' ? '상담중' : '일반',
     product: d.interest, next: d.next, logs: d.logs || [], star: d.star, fromDb: d.received || d.created || today(),
     memo: [`관심고객 (${d.source || '출처 없음'}, 받은 날 ${d.received || '-'})`, !birth && d.age && `나이: ${d.age}`, d.memo].filter(Boolean).join('\n'),
   };
@@ -2573,9 +2573,9 @@ function showProspect(id) {
 // 상담이 시작되면 개인 고객으로 옮기기 (상담 기록도 함께 옮김)
 function convertProspect(id) {
   const p = db.prospects.find(x => x.id === id);
-  if (!p || !confirm(`${p.name}님을 정식 고객으로 옮길까요?\n고객 목록에 '관심' 단계로 등록되고, 적어 둔 상담 기록도 함께 옮겨집니다.`)) return;
+  if (!p || !confirm(`${p.name}님을 정식 고객으로 옮길까요?\n고객 목록에 '일반' 단계로 등록되고, 적어 둔 상담 기록도 함께 옮겨집니다.`)) return;
   const c = {
-    id: uid(), created: today(), name: p.name, phone: p.phone, stage: '관심', product: p.interest, next: p.next,
+    id: uid(), created: today(), name: p.name, phone: p.phone, stage: '일반', product: p.interest, next: p.next,
     memo: [p.referrer && `소개: ${p.referrer}님`, p.memo].filter(Boolean).join('\n'), logs: p.logs || [], star: p.star,
   };
   db.customers.push(c);
@@ -3118,6 +3118,11 @@ if (Array.isArray(db.memos) && db.memos.length) {
 // 한 번만: 주간계획을 새 한글(hwp) 계획표로 새로고침 (2026-10-26 요청)
 if (!db.settings.weeklyV3) { db.weekly = defaultWeekly(); db.settings.weeklyV2 = db.settings.weeklyV3 = true; save(); } // 2026-11-05 새 계획표
 // 한 번만: 이미 저장된 전화번호도 '-' 넣은 모양으로 맞추기
+// 고객 진행 단계 '관심' → '일반' (한 번만)
+if (!db.settings.stageV1) {
+  db.customers.forEach(c => { if (c.stage === '관심') c.stage = '일반'; });
+  db.settings.stageV1 = true; save();
+}
 if (!db.settings.phoneFmtV1) {
   ['customers', 'dbleads', 'prospects', 'ceos', 'contracted', 'cards', 'fires'].forEach(c => (db[c] || []).forEach(x => { if (x.phone) { const f = phoneVal(x.phone); if (f !== x.phone) x.phone = f; } }));
   db.settings.phoneFmtV1 = true; save();
