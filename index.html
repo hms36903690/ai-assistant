@@ -446,7 +446,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-207';
+const APP_VERSION = '2026.11.17-208';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -584,7 +584,7 @@ function formHtml(fields, data) {
     else if (f.type === 'textarea') input = `<textarea id="f_${f.k}" placeholder="${esc(f.ph || '')}">${v}</textarea>`;
     else if (f.type === 'checks') input = `<div class="checks">${f.options.map(o => `<label><input type="checkbox" name="f_${f.k}" value="${esc(o)}"${(data[f.k] || []).includes(o) ? ' checked' : ''}>${esc(o)}</label>`).join('')}</div>`;
     else if (f.type === 'money') input = `<div style="position:relative"><input id="f_${f.k}" type="text" inputmode="numeric" value="${data[f.k] ? Number(data[f.k]).toLocaleString('ko-KR') : ''}" placeholder="${esc(f.ph || '')}" style="padding-right:34px" oninput="moneyInput(this)"><span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--sub)">원</span></div>`;
-    else if (f.unit) input = `<div style="position:relative"><input id="f_${f.k}" type="${f.type || 'text'}" value="${v}" placeholder="${esc(f.ph || '')}"${f.type === 'number' ? ' inputmode="numeric"' : ''} style="padding-right:34px"><span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--sub)">${esc(f.unit)}</span></div>`;
+    else if (f.unit) input = `<div style="position:relative">${f.pre ? `<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--sub)">${esc(f.pre)}</span>` : ''}<input id="f_${f.k}" type="${f.type || 'text'}" value="${v}" placeholder="${esc(f.ph || '')}"${f.type === 'number' ? ' inputmode="numeric"' : ''} style="padding-right:34px${f.pre ? ';padding-left:46px' : ''}"><span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--sub)">${esc(f.unit)}</span></div>`;
     else if (f.type === 'tel') input = `<input id="f_${f.k}" type="tel" inputmode="tel" value="${v}" placeholder="${esc(f.ph || '')}" oninput="phoneInput(this)" onkeyup="phoneInput(this)" oncompositionend="phoneInput(this)" onblur="phoneInput(this)">`;
     else input = `<input id="f_${f.k}" type="${f.type || 'text'}" value="${v}" placeholder="${esc(f.ph || '')}"${f.type === 'number' ? ' inputmode="numeric"' : ''}>`;
     const lbl = f.type === 'tel' ? `<label style="display:flex;align-items:center;justify-content:space-between;gap:6px">${esc(f.label)}<span style="display:flex;gap:4px"><button type="button" class="btn sec sm" style="padding:3px 8px;font-size:12px" onclick="pasteContactOne()">📋 붙여넣기</button></span></label>` : `<label>${esc(f.label)}</label>`;
@@ -2725,7 +2725,7 @@ function showCeo(id) {
 /* ───────── 목표 ───────── */
 const GOAL_FIELDS = [
   {k: 'newCust', label: '신규 고객', type: 'number', unit: '명'},
-  {k: 'consult', label: '미팅', type: 'number', unit: '건'}, // 예전 이름 '실제 상담'
+  {k: 'consult', label: '미팅', type: 'number', unit: '건', pre: '하루'}, // 예전 이름 '실제 상담'. 하루 건수로 적고, 한 달 목표는 × 20일
   {k: 'contract', label: '계약', type: 'number', unit: '건'},
   {k: 'premium', label: '월 보험료 합계', type: 'money', full: true}, // 한 줄 전체로 넓게
 ];
@@ -2740,11 +2740,11 @@ function goalHint(k, g) {
 function goalFormHtml(g) {
   return formHtml(GOAL_FIELDS, g).replace(/^<div class="formgrid">|<\/div>$/g, '')
     .replace(/(<input id="f_(\w+)"[^>]*>(?:<span[^>]*>[^<]*<\/span><\/div>)?)<\/div>/g, (all, inp, k) =>
-      `${inp}<div class="goal-note" id="gn_${k}">${goalHint(k, g)}</div></div>`);
+      `${inp}</div>`); // (칸 아래 작은 글씨 안내는 사용자 요청으로 뺌)
 }
 function goalHintsUpdate() {
   const g = readForm(GOAL_FIELDS);
-  GOAL_FIELDS.forEach(f => { $('gn_' + f.k).textContent = goalHint(f.k, g); });
+  // (칸 아래 작은 글씨 안내 없음)
 }
 // 홈 목표: 달을 골라 그 달 목표와 실적 보기 (기본은 이번 달)
 function renderHomeGoals() {
@@ -2780,9 +2780,9 @@ function goalBars(m, onGoalsPage) {
   const rows = GOAL_FIELDS.filter(f => Number(g[f.k]) > 0);
   if (!rows.length) return `<div class="empty">아직 목표가 없습니다.${onGoalsPage ? ' 오른쪽(아래)에서 설정하세요.' : ' <a href="#goals">목표 설정하기</a>'}</div>`;
   return rows.map(f => {
-    const goal = Number(g[f.k]), cur = s[f.k], pct = Math.min(100, Math.round(cur / goal * 100));
+    const daily = f.k === 'consult', goal = Number(g[f.k]) * (daily ? 20 : 1), cur = s[f.k], pct = Math.min(100, Math.round(cur / goal * 100));
     const fmt = f.k === 'premium' ? won : n => n;
-    return `<div class="progress"><div class="lbl"><span>${f.label.replace(/ \(.*\)/, '')}</span><span><b>${fmt(cur)}</b> / ${fmt(goal)} (${pct}%)</span></div>
+    return `<div class="progress"><div class="lbl"><span>${f.label.replace(/ \(.*\)/, '')}${daily ? ` <small class="muted">하루 ${Number(g[f.k])}건</small>` : ''}</span><span><b>${fmt(cur)}</b> / ${fmt(goal)} (${pct}%)</span></div>
       <div class="bar"><i class="${pct >= 100 ? 'done' : ''}" style="width:${pct}%"></i></div></div>`;
   }).join('');
 }
@@ -3208,9 +3208,11 @@ if (!db.settings.weeklyV3) { db.weekly = defaultWeekly(); db.settings.weeklyV2 =
 // 한 번만: 이미 저장된 전화번호도 '-' 넣은 모양으로 맞추기
 // 고객 진행 단계 '관심' → '일반' (한 번만)
 // 목표 '실제 상담' → '미팅', 이번 달 미팅 목표는 하루 2건 × 20일 = 40건 (한 번만)
-if (!db.settings.meetV1) {
-  const m = thisMonth(); db.goals[m] = db.goals[m] || {}; db.goals[m].consult = '40';
-  db.settings.meetV1 = true; save();
+if (!db.settings.meetV2) {
+  // 미팅 목표는 하루 건수로 적음 → 예전에 한 달 건수(10 넘는 숫자)로 적은 달은 하루 건수로 바꾸고, 이번 달은 하루 2건
+  Object.values(db.goals).forEach(g => { if (g && Number(g.consult) > 10) g.consult = String(Math.max(1, Math.round(Number(g.consult) / 20))); });
+  const m = thisMonth(); db.goals[m] = db.goals[m] || {}; db.goals[m].consult = '2';
+  db.settings.meetV1 = db.settings.meetV2 = true; save();
 }
 if (!db.settings.stageV1) {
   db.customers.forEach(c => { if (c.stage === '관심') c.stage = '일반'; });
