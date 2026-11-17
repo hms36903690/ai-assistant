@@ -45,7 +45,14 @@ $('pick').onclick = async () => {
   try { list = await navigator.contacts.select(['name', 'tel'], {multiple: true}) || []; }
   catch (e) { $('msg').innerHTML = `<span class="err">연락처 창을 열지 못했어요. (${esc(e.name || '')})</span>`; return; }
   const items = list.map(c => ({nm: String((c.name || []).find(Boolean) || '').trim(), tel: fmt((c.tel || []).find(Boolean))})).filter(x => x.nm || x.tel);
-  if (!items.length) { $('msg').innerHTML = '<span class="err">고른 사람이 없어요. 이름을 눌러 ✓ 표시한 뒤 [완료]를 눌러 주세요.</span>'; return; }
+  if (!list.length) { $('msg').innerHTML = '<span class="err">휴대폰이 0명을 넘겨줬어요.</span><br>이름을 눌러 ✓ 표시한 뒤 오른쪽 위 [완료]를 눌러 주세요.'; return; }
+  if (!items.length) {
+    // 사람은 넘어왔는데 이름·번호가 비어 있음 → 연락처 창 위 [이름] [전화번호] 버튼이 꺼져 있거나 크롬 연락처 권한 문제
+    $('msg').innerHTML = `<span class="err">${list.length}명을 받았는데 이름·번호가 비어 있어요.</span><br>
+      연락처 창 맨 위의 <b>[이름] [전화번호]</b> 버튼을 눌러 <b>둘 다 켜진(색칠된) 상태</b>로 한 뒤 다시 골라 주세요.<br>
+      <small style="color:#9aa5b1">받은 내용: ${esc(JSON.stringify(list.slice(0, 2)))}</small>`;
+    return;
+  }
   let box = []; try { box = JSON.parse(localStorage.getItem('hmsPicked') || '[]'); } catch (e) {}
   box.push({to, items, t: Date.now()});
   localStorage.setItem('hmsPicked', JSON.stringify(box));
