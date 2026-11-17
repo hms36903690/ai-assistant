@@ -446,7 +446,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-199';
+const APP_VERSION = '2026.11.17-200';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -2098,9 +2098,24 @@ function delLog(kind, id, logId) {
   const p = findPerson(kind, id); p.logs = p.logs.filter(l => l.id !== logId);
   save(); SHOW[kind](id); refresh();
 }
-function removeItem(coll, id) {
-  if (!confirm('정말 삭제할까요? 되돌릴 수 없습니다.')) return;
-  db[coll] = db[coll].filter(x => x.id !== id);
+// 삭제는 두 번 물어봄: ① 삭제할까요? → ② 한 번 더, 정말 삭제할까요? ('아니요'면 원래 창으로)
+let delBack = null;
+function removeItem(coll, id, step = 1) {
+  const x = (db[coll] || []).find(y => y.id === id); if (!x) return;
+  if (step === 1) delBack = sheetOpen() ? {t: $('sheetTitle').textContent, h: $('sheetBody').innerHTML} : null;
+  const nm = x.name || x.company || x.title || x.product || '이 항목';
+  openSheet(step === 1 ? '삭제할까요?' : '⚠️ 한 번 더 확인할게요', `
+    <p style="font-size:17px;margin-top:0">${step === 1 ? `<b>${esc(nm)}</b>을(를) 삭제할까요?` : `정말 <b>${esc(nm)}</b>을(를) 삭제할까요?<br><span style="color:#b42318">지우면 되돌릴 수 없어요.</span>`}</p>
+    <div class="row" style="margin-top:14px">
+      <button class="btn sec grow" style="padding:14px" onclick="removeCancel()">아니요</button>
+      <button class="btn danger grow" style="padding:14px" onclick="${step === 1 ? `removeItem('${coll}','${id}',2)` : `removeItemOk('${coll}','${id}')`}">${step === 1 ? '삭제' : '네, 삭제할게요'}</button>
+    </div>`);
+}
+function removeCancel() {
+  if (delBack) { openSheet(delBack.t, ''); $('sheetBody').innerHTML = delBack.h; delBack = null; } else closeSheet();
+}
+function removeItemOk(coll, id) {
+  db[coll] = db[coll].filter(x => x.id !== id); delBack = null;
   save(); closeSheet(); refresh(); toast('삭제했습니다.');
 }
 
