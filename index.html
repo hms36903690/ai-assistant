@@ -464,7 +464,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
         <button class="hub" onclick="fdGoDb()"><span class="ic">🏢</span><b>사업자 DB 발굴</b><small id="hubFdCnt">발굴 DB 보기</small></button>
         <button class="hub" onclick="location.hash='studio'"><span class="ic">🎬</span><b>홍보 콘텐츠</b><small>블로그·쇼츠 게시 관리</small></button>
         <button class="hub" onclick="applyLinkOpen()"><span class="ic">🔳</span><b>상담 신청 페이지</b><small>QR·링크 유입 관리</small></button>
-        <button class="hub" onclick="location.hash='ceo'"><span class="ic">🏢</span><b>CEO로 바로가기</b><small id="hubCeoCnt">접수·발굴한 DB는 모두 CEO로</small></button>
+        <button class="hub" onclick="inquiryOpen()"><span class="ic">💬</span><b>문의 고객 접수</b><small>받은 신청 문자 → CEO로 접수</small></button>
         <button class="hub" onclick="funnelOpen()"><span class="ic">📈</span><b>유입 성과 분석</b><small>채널별 문의·상담·계약</small></button>
         <button class="hub" onclick="followOpen()"><span class="ic">🧠</span><b>후속 상담 도우미</b><small>상담 준비와 다음 행동 추천</small></button>
       </div>
@@ -548,7 +548,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-217';
+const APP_VERSION = '2026.11.17-218';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -3304,7 +3304,7 @@ function parseApply(t) {
   return o.name || o.phone ? o : null;
 }
 function inquiryOpen(prefill) {
-  openSheet('💬 받은 상담 신청 문자 → CEO', `<p class="muted" style="margin-top:0">고객에게서 온 <b>[상담신청]</b> 문자를 길게 눌러 복사한 뒤 아래에 붙여넣으세요. (문자 앱에서 그 문자를 <b>공유 → 현미숙 FC</b>로 보내도 바로 들어와요)</p>
+  openSheet('💬 문의 고객 접수', `<p class="muted" style="margin-top:0">고객에게서 온 <b>[상담신청]</b> 문자를 길게 눌러 복사한 뒤 아래에 붙여넣으세요. (문자 앱에서 그 문자를 <b>공유 → 현미숙 FC</b>로 보내도 바로 들어와요)</p>
     <textarea id="iqTxt" style="min-height:150px" placeholder="[상담신청]&#10;성함: 홍길동&#10;연락처: 010-1234-5678&#10;…" oninput="inquiryPreview()">${esc(prefill || '')}</textarea>
     <div id="iqPrev" style="margin:8px 0"></div>
     <button class="btn hms-btn" style="width:100%" onclick="inquirySave()">🏢 CEO로 접수</button>`);
@@ -3452,7 +3452,6 @@ function renderSales() {
   if (!$('salesDash')) return;
   const nl = [...db.ceos.filter(d => d.isNew).map(d => d.boss || d.company), ...db.dbleads.filter(d => d.isNew).map(d => d.name)];
   $('fdNewLeads').innerHTML = nl.length ? `<div class="notice" style="background:#eef7f2;border-color:#4caf50;color:#0d3b2e;cursor:pointer" onclick="location.hash='ceo'">🔔 <b>새 상담 신청 ${nl.length}건</b> — ${nl.slice(0, 3).map(esc).join(', ')}${nl.length > 3 ? ' 외' : ''} <b>›</b></div>` : '';
-  if ($('hubCeoCnt')) $('hubCeoCnt').textContent = `CEO ${db.ceos.length}곳 보기 ›`;
   $('salesDash').innerHTML = dashData().map(([k, v, u, hot, sub], i) => {
     const n = Array.isArray(v) ? v.length : v;
     return `<button class="${hot && n ? 'hot' : ''}" onclick="dashOpen(${i})"><small>${k}</small><b>${n}${u}${sub ? `<span class="muted" style="font-size:12px;font-weight:600"> · ${sub}</span>` : ''}</b></button>`;
