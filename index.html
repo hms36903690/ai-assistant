@@ -138,7 +138,6 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 .chips button{flex:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--ink)}
 .month-head{scroll-margin-top:calc(124px + env(safe-area-inset-top));position:sticky;top:calc(124px + env(safe-area-inset-top));z-index:2;background:#eef2f7;margin:10px -15px 0;padding:8px 15px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .month-head:first-child{margin-top:-15px;border-top:0;border-radius:15px 15px 0 0}
-body.no-phone .phone-only{display:none!important} /* 연락처 가져오기 📱는 휴대폰에서만 (태블릿·컴퓨터는 숨김) */
 #dbList .month-head:first-child{margin-top:4px;border-top:1px solid var(--line);border-radius:0}
 .month-head b{font-size:15px}
 .month-head .muted{flex:1;text-align:right;font-size:12px}
@@ -453,7 +452,7 @@ body.no-phone .phone-only{display:none!important} /* 연락처 가져오기 📱
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-184';
+const APP_VERSION = '2026.11.17-185';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 const CEO_ISSUES = ['가업승계', '퇴직금 재원', '법인세 절감', '대표 보장', '임원 보장', '직원 복리후생', '가지급금 정리', '주식 가치평가'];
 const PAGES = {home: '홈', customers: '고객', dbleads: '관심고객', prospects: '가망고객', ceo: 'CEO 고객', contracted: '기계약자', cards: '삼성카드', fires: '삼성화재', goals: '목표', weekly: '주간계획', money: '월 소득 1억원 달성', studio: '콘텐츠 작업실'};
@@ -791,9 +790,7 @@ function addContacts(coll, items) {
   toast(`${T.label} ${added}명을 가져왔어요.${skipped ? ` (이미 있는 ${skipped}명은 건너뜀)` : ''}`);
 }
 // 설치한 앱(안드로이드) 안에서는 연락처 창이 바로 닫히는 기기가 있어서, 크롬에서 고르는 작은 화면(contacts.html)으로 보냄
-// 휴대폰인지 (안드로이드 태블릿 크롬은 'Mobile'이 없음) → 아니면 📱 버튼 숨김
-const isPhone = () => /Android/i.test(navigator.userAgent) && /Mobile/i.test(navigator.userAgent);
-if (!isPhone()) document.body.classList.add('no-phone');
+// (📱 버튼은 모든 기기에 보임 — 폴더블 휴대폰은 펼치면 태블릿처럼 보여서 기기 구분을 안 함)
 const isAppWindow = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 const contactsViaChrome = () => isAppWindow() && /Android/i.test(navigator.userAgent);
 function openContactsPage(coll) {
