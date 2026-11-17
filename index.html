@@ -446,7 +446,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-198';
+const APP_VERSION = '2026.11.17-199';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -776,17 +776,15 @@ function togglePros(kind, id) {
 const starToggleBtn = (kind, p) => `<button class="btn sec${p.star ? ' on' : ''}" style="width:100%;margin-bottom:12px" onclick="toggleStar('${kind}','${p.id}',true)">${p.star ? '★ 중요고객 (누르면 해제)' : '☆ 중요고객으로 표시'}</button>`;
 const contactRow = phone => phone ? `<div class="row" style="margin-bottom:12px"><a class="btn grow" href="${telHref(phone)}" style="text-align:center;text-decoration:none">📞 전화</a><a class="btn sec grow" href="${smsHref(phone)}" style="text-align:center;text-decoration:none">💬 문자</a></div>` : '';
 const infoCard = rows => `<div class="card">${rows.filter(r => r[1]).map(([k, v]) => `<div style="margin-bottom:6px"><span class="muted">${k}</span><br>${esc(v).replace(/\n/g, '<br>')}</div>`).join('') || '<span class="muted">입력된 정보가 없습니다.</span>'}</div>`;
-// ✨ 상담 문구: 고객·관심·가망·CEO 문구를 누구에게나 다 쓸 수 있게 (그 사람 종류 문구가 맨 위), 누르면 바로 아래에 만든 문구가 보임
-const TPL_GROUPS = [['c', '👥 고객용'], ['d', '📥 관심고객용'], ['p', '🌱 가망고객용'], ['ceo', '🏢 CEO용']];
+// ✨ 상담 문구: 그 사람 종류 문구만 (고객은 고객용, 관심고객은 관심고객용…), 누르면 위에 만든 문구가 크게 보임
 const templateCard = (kind, p) => `<div class="card"><h3>✨ 상담 문구 만들기</h3>
   <div id="aiOutWrap" style="display:none;margin-bottom:12px;padding:10px;border:2px solid #102a43;border-radius:12px;background:#f8fafc">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b id="aiOutTitle">만든 문구</b><span class="muted" style="font-size:12px">고쳐서 써도 돼요</span></div>
     <textarea id="aiOut" style="min-height:120px" oninput="aiOutFit()"></textarea>
     <div class="row" style="margin-top:8px"><button class="btn grow" onclick="copyText($('aiOut').value)">📋 복사하기</button>${p.phone ? `<button class="btn sec grow" onclick="location.href=smsBodyHref('${esc(p.phone)}',$('aiOut').value)">💬 문자로 보내기</button>` : ''}</div>
   </div>
-  ${[...TPL_GROUPS.filter(g => g[0] === kind), ...TPL_GROUPS.filter(g => g[0] !== kind)].map(([g, lb]) =>
-    `<div class="muted" style="font-size:13px;margin:6px 0 4px">${lb}</div><div class="ai-buttons">${Object.keys(TEMPLATES[g]).map(k =>
-      `<button class="btn sec" onclick="makeText('${kind}','${p.id}','${esc(k)}','${g}')">${esc(k)}</button>`).join('')}</div>`).join('')}
+  <div class="ai-buttons">${Object.keys(TEMPLATES[kind]).map(k =>
+    `<button class="btn sec" onclick="makeText('${kind}','${p.id}','${esc(k)}')">${esc(k)}</button>`).join('')}</div>
 </div>`;
 
 /* ───────── ✏️ 내가 적는 할 일 ───────── */
