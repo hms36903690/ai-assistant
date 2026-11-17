@@ -1,6 +1,6 @@
 // 앱 화면 파일을 기기에 저장해 두어 인터넷이 없어도 열리게 합니다.
 // 새 버전을 올릴 때는 아래 버전 숫자를 올려 주세요. (예: v2 → v3)
-const CACHE = 'hmsfc-v176';
+const CACHE = 'hmsfc-v177';
 const FILES = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
@@ -10,7 +10,7 @@ self.addEventListener('install', e => {
 // 예전 버전 보관함 정리
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== 'hmsfc-share').map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
@@ -19,7 +19,20 @@ self.addEventListener('activate', e => {
 // 아이콘 등 나머지는 저장된 것을 먼저 씁니다.
 self.addEventListener('fetch', e => {
   const req = e.request;
+  // 휴대폰 연락처 앱에서 '공유 → 이 앱'으로 보낸 연락처(텍스트·vcf 파일)를 받아 두고 앱을 엽니다.
+  if (req.method === 'POST' && new URL(req.url).pathname.endsWith('/share-target')) {
+    e.respondWith((async () => {
+      try {
+        const fd = await req.formData(); let text = [fd.get('title'), fd.get('text'), fd.get('url')].filter(Boolean).join('\n');
+        for (const f of fd.getAll('file')) if (f && f.text) text += '\n' + await f.text();
+        const c = await caches.open('hmsfc-share'); await c.put('./__share', new Response(text));
+      } catch (err) {}
+      return Response.redirect('./index.html?share=1#dbleads', 303);
+    })());
+    return;
+  }
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  if (new URL(req.url).pathname.endsWith('/manifest.json')) { e.respondWith(fetch(req, {cache: 'no-cache'}).catch(() => caches.match(req))); return; }
   if (req.mode === 'navigate') {
     e.respondWith(fetch(req.url, {cache: 'no-cache', credentials: 'same-origin'})
       .then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put('./index.html', copy)); } return res; })
