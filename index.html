@@ -63,6 +63,8 @@ button{cursor:pointer}
 .empty{color:var(--sub);text-align:center;padding:18px 0;font-size:14px}
 .quick{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
 .quick button{min-height:54px;border:1px solid var(--line);background:#fff;border-radius:12px;font-weight:700;font-size:13px;padding:4px 2px}
+.quick .qcnt{display:block;font-weight:600;font-size:12px;color:#486581;margin-top:2px}
+.stat .sub{display:block;font-size:11px;color:#7b8794;margin-top:2px;line-height:1.3}
 .notice{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:12px}
 
 .toolbar{position:sticky;top:calc(64px + env(safe-area-inset-top));z-index:4;background:var(--bg);display:flex;gap:8px;padding:4px 0 10px}
@@ -271,10 +273,10 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
       <ul class="list" id="todoList"></ul></div>
     <div class="stats" id="homeStats"></div>
     <div class="quick">
-      <button onclick="editCustomer()">＋ 고객</button>
-      <button onclick="editDb()">＋ 관심</button>
-      <button onclick="editProspect()">＋ 가망</button>
-      <button onclick="editCeo()">＋ CEO</button>
+      <button onclick="editCustomer()">＋ 고객<small class="qcnt" id="qcC"></small></button>
+      <button onclick="editDb()">＋ 관심<small class="qcnt" id="qcD"></small></button>
+      <button onclick="editProspect()">＋ 가망<small class="qcnt" id="qcP"></small></button>
+      <button onclick="editCeo()">＋ CEO<small class="qcnt" id="qcE"></small></button>
       <button onclick="editPerf()">＋ 실적</button>
     </div>
     <div class="grid2">
@@ -444,7 +446,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-195';
+const APP_VERSION = '2026.11.17-196';
 const STAGES = ['관심', '상담중', '제안', '계약', '유지관리'];
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -1730,10 +1732,14 @@ function renderHome() {
     ? `<div class="notice">💾 ${lb ? `마지막 백업이 ${dayDiff(lb, today())}일 전입니다.` : '아직 백업한 적이 없습니다.'} <a href="#" onclick="exportData();return false">지금 백업하기</a></div>` : '';
 
   const s = monthStats(thisMonth()), todo = todoItems();
+  // 전체 고객 = 고객 + 관심고객 + CEO, 아래 ＋ 버튼마다 따로 몇 명인지
+  const nC = db.customers.length, nD = db.dbleads.length, nE = db.ceos.length;
+  const nP = db.prospects.length + [...db.customers, ...db.dbleads, ...db.ceos].filter(x => x.pros).length;
   $('homeStats').innerHTML = [
-    ['전체 고객', total + '명'], ['연락할 고객', todo.length + '건'],
+    ['전체 고객', (nC + nD + nE) + '명', `고객 ${nC} · 관심 ${nD} · CEO ${nE}`], ['연락할 고객', todo.length + '건'],
     ['이번 달 상담', s.consult + '건'], ['이번 달 계약', s.contract + '건'],
-  ].map(([k, v]) => `<div class="stat"><small>${k}</small><b>${v}</b></div>`).join('');
+  ].map(([k, v, sub]) => `<div class="stat"><small>${k}</small><b>${v}</b>${sub ? `<span class="sub">${sub}</span>` : ''}</div>`).join('');
+  $('qcC').textContent = nC + '명'; $('qcD').textContent = nD + '명'; $('qcP').textContent = nP + '명'; $('qcE').textContent = nE + '곳';
 
   renderTasks();
   $('todoList').innerHTML = todo.length ? todo.map(({p, kind, tag}) => personItem(kind, p, esc(p.nextTodo || p.memo || ''), tag)).join('')
