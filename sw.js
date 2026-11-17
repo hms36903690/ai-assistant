@@ -1,6 +1,6 @@
 // 앱 화면 파일을 기기에 저장해 두어 인터넷이 없어도 열리게 합니다.
 // 새 버전을 올릴 때는 아래 버전 숫자를 올려 주세요. (예: v2 → v3)
-const CACHE = 'hmsfc-v208';
+const CACHE = 'hmsfc-v209';
 const FILES = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
@@ -10,7 +10,7 @@ self.addEventListener('install', e => {
 // 예전 버전 보관함 정리
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== 'hmsfc-share').map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== 'hmsfc-share' && k !== 'hmsfc-finder').map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
