@@ -45,7 +45,7 @@ $('pick').onclick = async () => {
   try { list = await navigator.contacts.select(['name', 'tel'], {multiple: true}) || []; }
   catch (e) { $('msg').innerHTML = `<span class="err">연락처 창을 열지 못했어요. (${esc(e.name || '')})</span>`; return; }
   const items = list.map(c => ({nm: String((c.name || []).find(Boolean) || '').trim(), tel: fmt((c.tel || []).find(Boolean))})).filter(x => x.nm || x.tel);
-  if (!list.length) { $('msg').innerHTML = '<span class="err">휴대폰이 0명을 넘겨줬어요.</span><br>이름을 눌러 ✓ 표시한 뒤 오른쪽 위 [완료]를 눌러 주세요.'; return; }
+  if (!list.length) { $('msg').innerHTML = '<span class="err">휴대폰이 0명을 넘겨줬어요.</span><br>이름을 눌러 ✓ 표시한 뒤 오른쪽 위 [완료]를 눌러 주세요.' + browserLine(); return; }
   if (!items.length) {
     // 사람은 넘어왔는데 이름·번호가 비어 있음 → 연락처 창 위 [이름] [전화번호] 버튼이 꺼져 있거나 크롬 연락처 권한 문제
     $('msg').innerHTML = `<span class="err">${list.length}명을 받았는데 이름·번호가 비어 있어요.</span><br>
@@ -62,6 +62,13 @@ $('pick').onclick = async () => {
   $('back').style.display = '';
   setTimeout(goBack, 1200);
 };
+// 어떤 브라우저인지 (삼성 인터넷은 연락처를 못 넘겨주는 경우가 있음)
+function browserLine() {
+  const ua = navigator.userAgent, m = ua.match(/SamsungBrowser\/([\d.]+)/), c = ua.match(/Chrome\/([\d.]+)/);
+  const name = m ? '삼성 인터넷 ' + m[1] : c ? '크롬 ' + c[1] : '기타 브라우저';
+  return `<br><br><small style="color:#7b8794">지금 브라우저: <b>${esc(name)}</b>${/Mobile/.test(ua) ? ' · 휴대폰' : ' · 태블릿'}</small>` +
+    (m ? '<br><span class="err">삼성 인터넷에서는 연락처가 안 넘어와요. 크롬(Chrome)에서 해 주세요.</span>' : '');
+}
 function goBack() {
   window.close(); // 앱에서 열린 창이면 닫히면서 앱으로 돌아감
   setTimeout(() => { $('msg').innerHTML += '<br>창이 안 닫히면 휴대폰의 [뒤로] 버튼을 누르거나 앱을 다시 열어 주세요.'; }, 600);
