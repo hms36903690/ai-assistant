@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>보험 상담 신청 · HMS PREMIUM</title>
+<style>
+  :root{--g:#0d3b2e;--g2:#14523f;--gold:#b89b5e;--gold2:#d4b46a;--ink:#1f2933;--sub:#616e7c;--line:#d9dee3;--bg:#f6f5f0}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  .wrap{max-width:560px;margin:0 auto;padding:16px 16px 40px}
+  .hero{background:linear-gradient(135deg,var(--g),var(--g2));color:#f3ead2;border-radius:18px;padding:20px;border:1px solid var(--gold)}
+  .brand{font-size:12px;letter-spacing:4px;color:var(--gold2);font-weight:800}
+  .hero h1{margin:4px 0 4px;font-size:23px}
+  .hero p{margin:0;font-size:14px;opacity:.9}
+  .card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:16px;padding:18px;margin-top:14px}
+  h2{font-size:20px;margin:0 0 10px}
+  label{display:block;font-size:15px;color:var(--sub);margin:14px 0 6px}
+  select,input[type=text],input[type=tel],textarea{width:100%;font:inherit;font-size:16px;padding:13px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink)}
+  textarea{border-radius:14px;min-height:80px;resize:vertical}
+  .radios{display:flex;gap:18px;flex-wrap:wrap}
+  .radios label{display:flex;align-items:center;gap:6px;margin:0;color:var(--ink);font-size:16px}
+  input[type=radio],input[type=checkbox]{width:20px;height:20px;accent-color:var(--g)}
+  .agree{background:#f8f7f2;border:1px solid #e8e1cc;border-radius:12px;padding:12px;font-size:13px;color:#4b5563;margin-top:16px}
+  .agree b{color:var(--ink)}
+  .chk{display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:15px;color:var(--ink)}
+  .btn{display:block;width:100%;margin-top:18px;padding:16px;font:inherit;font-size:18px;font-weight:800;border-radius:999px;border:1px solid var(--gold);background:var(--g);color:#f3ead2}
+  .err{color:#b42318;font-size:14px;margin-top:10px;min-height:20px}
+  .done{text-align:center}
+  .muted{color:var(--sub);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero"><div class="brand">HMS PREMIUM</div><h1>보험 상담 신청</h1><p id="who">현미숙 FC가 직접 연락드려요. 부담 없이 신청해 주세요.</p></div>
+
+  <div class="card" id="formCard">
+    <h2>상담 신청</h2>
+    <label for="ind">사업 업종</label>
+    <select id="ind"><option>음식점·카페</option><option>숙박·펜션</option><option>소매·유통</option><option>병의원·약국</option><option>전문서비스(법무·세무·부동산)</option><option>교육·학원</option><option>미용·생활서비스</option><option>자동차</option><option>법인 회사</option><option>직장인·개인</option><option>기타</option></select>
+    <label for="topic">상담받고 싶은 내용</label>
+    <select id="topic"><option>기존 보험 점검</option><option>사업장 화재·배상책임</option><option>건강·암·실손 보장</option><option>종신·사망 보장</option><option>연금·노후 준비</option><option>자녀·태아 보험</option><option>법인·CEO 컨설팅</option><option>기타</option></select>
+    <label for="nm">성함</label>
+    <input type="text" id="nm" placeholder="성함을 입력해 주세요" autocomplete="name">
+    <label for="ph">연락처</label>
+    <input type="tel" id="ph" placeholder="상담 회신을 위한 연락처" inputmode="tel" autocomplete="tel">
+    <label>연락 희망 시간</label>
+    <div class="radios"><label><input type="radio" name="tm" value="오전" checked> 오전</label><label><input type="radio" name="tm" value="오후"> 오후</label><label><input type="radio" name="tm" value="저녁"> 저녁</label></div>
+    <label for="q">궁금한 점 (선택)</label>
+    <textarea id="q" placeholder="편하게 적어 주세요"></textarea>
+
+    <div class="agree">
+      <b>개인정보 수집·이용 안내</b><br>
+      · 수집 목적: 보험 상담 신청 확인과 상담 회신<br>
+      · 수집 항목: 성함, 연락처, 업종, 상담 희망 내용, 연락 희망 시간, 궁금한 점<br>
+      · 보유 기간: 상담 종료 후 1년 (또는 동의를 철회하실 때까지) 보관 후 파기<br>
+      · 동의를 거부하실 수 있으며, 거부하시면 상담 신청이 접수되지 않아요.
+    </div>
+    <label class="chk"><input type="checkbox" id="ag1"> <span><b>[필수]</b> 개인정보 수집·이용에 동의합니다.</span></label>
+    <label class="chk"><input type="checkbox" id="ag2"> <span>[선택] 보험·이벤트 등 광고성 정보를 문자로 받겠습니다.</span></label>
+    <div class="err" id="err"></div>
+    <button class="btn" id="send">상담 신청하기</button>
+    <p class="muted" style="margin:10px 0 0">신청하기를 누르면 휴대폰 문자 앱이 열려요. 내용을 확인하고 <b>[보내기]</b>를 눌러 주시면 접수돼요. 입력하신 정보는 이 페이지에 저장되지 않아요.</p>
+  </div>
+
+  <div class="card done" id="doneCard" style="display:none">
+    <h2>📩 문자 앱이 열렸어요</h2>
+    <p>문자 내용을 확인하고 <b>[보내기]</b>를 누르시면 상담 신청이 끝나요.<br>희망하신 시간에 연락드릴게요. 감사합니다!</p>
+    <button class="btn" id="again" style="background:#fff;color:var(--g)">문자 앱 다시 열기</button>
+  </div>
+  <p class="muted" style="text-align:center;margin-top:16px">삼성생명 FC 현미숙 · HMS PREMIUM</p>
+</div>
+<script>
+// 이 페이지는 아무것도 저장하지 않아요. 신청 내용은 고객 휴대폰의 문자로 FC에게 보내져요.
+// 링크 예: apply.html?to=01012345678&ch=블로그  (to = 받을 번호, ch = 유입 채널)
+const P = new URLSearchParams(location.search);
+const to = (P.get('to') || '').replace(/\D/g, ''), ch = (P.get('ch') || '').slice(0, 20), fc = (P.get('n') || '').slice(0, 20);
+const $ = id => document.getElementById(id);
+if (fc) $('who').textContent = `${fc}가 직접 연락드려요. 부담 없이 신청해 주세요.`;
+if (!/^01\d{8,9}$/.test(to)) {
+  $('formCard').innerHTML = '<h2>링크를 다시 확인해 주세요</h2><p>상담 신청 링크가 올바르지 않아요. 받으신 링크를 다시 눌러 주세요.</p>';
+}
+const fmt = v => { const d = String(v).replace(/\D/g, '').slice(0, 11); return d.length === 11 ? `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}` : d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : d; };
+let smsUrl = '';
+if ($('send')) $('send').onclick = () => {
+  const nm = $('nm').value.trim(), ph = fmt($('ph').value);
+  if (!nm) return $('err').textContent = '성함을 입력해 주세요.';
+  if (!/^0\d{1,2}-\d{3,4}-\d{4}$/.test(ph)) return $('err').textContent = '연락처를 정확히 입력해 주세요. (예: 010-1234-5678)';
+  if (!$('ag1').checked) return $('err').textContent = '개인정보 수집·이용에 동의해 주셔야 접수돼요.';
+  $('err').textContent = '';
+  const d = new Date(), day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const body = ['[상담신청]', `성함: ${nm}`, `연락처: ${ph}`, `업종: ${$('ind').value}`, `상담: ${$('topic').value}`,
+    `희망시간: ${document.querySelector('input[name=tm]:checked').value}`, $('q').value.trim() && `문의: ${$('q').value.trim().slice(0, 200)}`,
+    `유입: ${ch || '상담 신청 페이지'}`, `개인정보 수집·이용 동의: 동의 (${day})`, `광고성 정보 수신: ${$('ag2').checked ? '동의' : '미동의'}`].filter(Boolean).join('\n');
+  smsUrl = `sms:${to}?&body=${encodeURIComponent(body)}`;
+  $('formCard').style.display = 'none'; $('doneCard').style.display = '';
+  location.href = smsUrl;
+};
+$('again').onclick = () => { if (smsUrl) location.href = smsUrl; };
+</script>
+</body>
+</html>
