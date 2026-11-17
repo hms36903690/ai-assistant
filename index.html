@@ -464,7 +464,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
         <button class="hub" onclick="fdGoDb()"><span class="ic">🏢</span><b>사업자 DB 발굴</b><small id="hubFdCnt">발굴 DB 보기</small></button>
         <button class="hub" onclick="location.hash='studio'"><span class="ic">🎬</span><b>홍보 콘텐츠</b><small>블로그·쇼츠 게시 관리</small></button>
         <button class="hub" onclick="applyLinkOpen()"><span class="ic">🔳</span><b>상담 신청 페이지</b><small>QR·링크 유입 관리</small></button>
-        <button class="hub" onclick="inquiryOpen()"><span class="ic">💬</span><b>문의 고객 접수</b><small>신청 내용과 회신 동의 기록</small></button>
+        <button class="hub" onclick="location.hash='ceo'"><span class="ic">🏢</span><b>CEO로 바로가기</b><small id="hubCeoCnt">접수·발굴한 DB는 모두 CEO로</small></button>
         <button class="hub" onclick="funnelOpen()"><span class="ic">📈</span><b>유입 성과 분석</b><small>채널별 문의·상담·계약</small></button>
         <button class="hub" onclick="followOpen()"><span class="ic">🧠</span><b>후속 상담 도우미</b><small>상담 준비와 다음 행동 추천</small></button>
       </div>
@@ -548,7 +548,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-216';
+const APP_VERSION = '2026.11.17-217';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -764,7 +764,7 @@ async function receiveShared() {
   history.replaceState(null, '', location.pathname + location.hash);
   let text = '';
   try { const c = await caches.open('hmsfc-share'), res = await c.match('./__share'); if (res) text = await res.text(); await c.delete('./__share'); } catch (e) {}
-  if (/\[상담신청\]/.test(text)) { location.hash = 'dbleads'; return inquirySave(text); } // 고객이 보낸 상담 신청 문자를 공유로 받으면 바로 접수
+  if (/\[상담신청\]/.test(text)) return inquirySave(text); // 고객이 보낸 상담 신청 문자를 공유로 받으면 바로 접수
   sharedList = parseContactsText(text);
   if (!sharedList.length) return alert('보내 준 내용에서 이름·전화번호를 찾지 못했어요.\n연락처 앱에서 [공유 → 텍스트] 또는 [명함(vcf)]으로 다시 보내 주세요.');
   const who = sharedList.length === 1 ? `<b>${esc(sharedList[0].nm || sharedList[0].tel)}</b> ${esc(sharedList[0].nm ? sharedList[0].tel : '')}` : `<b>${sharedList.length}명</b>`;
@@ -2799,7 +2799,7 @@ function renderCeos() {
     <li class="item" onclick="showCeo('${c.id}')">
       <div class="avatar">🏢</div>
       <div class="body"><div class="name">${esc(c.company)} <span class="muted">${esc(c.boss || '')}</span></div>
-      <div class="meta">${esc([(c.issues || []).join(', '), c.next && '미팅 ' + c.next].filter(Boolean).join(' · '))}</div></div>${c.cstatus && c.cstatus !== '미연락' ? dbTag(c.cstatus) : ''}${prosBtn('ceo', c)}${starBtn('ceo', c)}</li>`).join('')
+      <div class="meta">${esc([(c.issues || []).join(', '), c.next && '미팅 ' + c.next].filter(Boolean).join(' · '))}</div></div>${c.isNew ? '<span class="tag" style="background:#e8f6ec;color:#1e7b34">NEW</span>' : ''}${c.cstatus && c.cstatus !== '미연락' ? dbTag(c.cstatus) : ''}${prosBtn('ceo', c)}${starBtn('ceo', c)}</li>`).join('')
     : `<li class="empty">${!db.ceos.length ? '법인(CEO) 고객을 등록해 보세요.' : starOnly.ceo ? '⭐ 중요고객이 없습니다.' : '검색 결과가 없습니다.'}</li>`;
 }
 function editCeo(id) {
@@ -2818,6 +2818,7 @@ function saveCeo(id) {
 }
 function showCeo(id) {
   const c = db.ceos.find(x => x.id === id); if (!c) return;
+  if (c.isNew) { c.isNew = false; save(); }
   const info = [['대표자', c.boss], ['연락처', c.phone], ['연락 상태', c.cstatus && c.cstatus !== '미연락' && c.cstatus], ['업종', c.industry], ['직원 수', c.staff && c.staff + '명'],
     ['관심 이슈', (c.issues || []).join(', ')], ['다음 미팅', c.next && `${c.next} ${c.nextTodo || ''}`], ['메모', c.memo]];
   openSheet(c.company, `
@@ -3041,7 +3042,7 @@ function fdShow(id) {
       <button class="btn ${f.refuse ? 'sec' : 'danger'}" style="width:100%;margin-top:8px" onclick="fdRefuse('${f.id}')">${f.refuse ? '연락 거부 풀기' : '🚫 연락 거부 (더 연락하지 않기)'}</button>
     </div>
     <button class="btn sec" style="width:100%;margin-bottom:8px" onclick="fdAskAi('${f.id}')">🤖 AI에게 물어볼 글 복사 (공개 사업체 정보만)</button>
-    ${f.refuse ? '' : `<div class="row" style="gap:8px;margin-bottom:8px"><button class="btn hms-btn grow" onclick="fdMove('${f.id}','ceo')">🏢 CEO로 옮기기</button><button class="btn sec grow" onclick="fdMove('${f.id}','db')">📥 관심고객으로</button></div>`}
+    ${f.refuse ? '' : `<button class="btn hms-btn" style="width:100%;margin-bottom:8px" onclick="fdMove('${f.id}','ceo')">🏢 CEO로 옮기기</button>`}
     <div class="row"><button class="btn sec" onclick="fdGoDb()">← 목록</button><button class="btn sec grow" onclick="fdEdit('${f.id}')">수정</button><button class="btn danger" onclick="removeItem('finds','${f.id}')">삭제</button></div>`);
 }
 // 🚶 방문 기록 · 🚫 연락 거부 (거부하면 CEO·관심고객으로 옮기기 버튼이 사라지고 목록에 표시)
@@ -3250,12 +3251,12 @@ const chOf = s => String(s || '').replace(/^상담신청·/, '') || '출처 없�
 const convSrc = c => { const m = String(c.memo || '').match(/^관심고객 \((.+?), 받은 날/); return m ? m[1] : null; };
 function renderPipe() {
   if (!$('pipe')) return;
-  const d = db.dbleads, conv = db.customers.filter(c => convSrc(c) !== null);
+  const d = [...db.dbleads, ...db.ceos.filter(c => c.source)], conv = db.customers.filter(c => convSrc(c) !== null);
   const steps = [
     ['발굴 후보', (db.finds || []).filter(f => !f.moved && !f.refuse).length],
     ['콘텐츠 관심 유입', d.filter(x => CONTENT_CH.test(x.source || '') && !/^상담신청/.test(x.source || '')).length],
     ['상담 신청 접수', d.filter(x => /^상담신청/.test(x.source || '')).length],
-    ['상담 진행', d.filter(x => ['통화완료', '약속잡음'].includes(x.status)).length + db.customers.filter(c => ['상담중', '제안'].includes(c.stage)).length],
+    ['상담 진행', d.filter(x => ['통화완료', '약속잡음'].includes(x.status || x.cstatus)).length + db.customers.filter(c => ['상담중', '제안'].includes(c.stage)).length],
     ['계약', db.customers.filter(c => ['계약', '유지관리'].includes(c.stage)).length],
   ];
   $('pipe').innerHTML = steps.map(([k, v], i) => `<div><b>${v}</b>${i + 1}. ${k}</div>`).join('');
@@ -3276,7 +3277,8 @@ function applyLinkOpen() {
     </div>
     <button class="btn hms-btn" style="width:100%;margin-top:12px" onclick="applyMake()">🔗 링크·QR 만들기</button>
     <div id="apOut" style="margin-top:12px"></div>
-    <button class="btn sec" style="width:100%;margin-top:8px" onclick="if(!db.settings.applyPhone)applyMake();if(db.settings.applyPhone)flyerOpen()">🖨️ 방문 안내문 만들기 (QR 넣은 한 장)</button>`);
+    <button class="btn sec" style="width:100%;margin-top:8px" onclick="if(!db.settings.applyPhone)applyMake();if(db.settings.applyPhone)flyerOpen()">🖨️ 방문 안내문 만들기 (QR 넣은 한 장)</button>
+    <button class="btn sec" style="width:100%;margin-top:8px" onclick="inquiryOpen()">💬 받은 [상담신청] 문자 붙여넣기 → CEO로</button>`);
   if (ph) applyMake();
 }
 let qrLib = null;
@@ -3302,33 +3304,34 @@ function parseApply(t) {
   return o.name || o.phone ? o : null;
 }
 function inquiryOpen(prefill) {
-  openSheet('💬 문의 고객 접수', `<p class="muted" style="margin-top:0">고객에게서 온 <b>[상담신청]</b> 문자를 길게 눌러 복사한 뒤 아래에 붙여넣으세요. (문자 앱에서 그 문자를 <b>공유 → 현미숙 FC</b>로 보내도 바로 들어와요)</p>
+  openSheet('💬 받은 상담 신청 문자 → CEO', `<p class="muted" style="margin-top:0">고객에게서 온 <b>[상담신청]</b> 문자를 길게 눌러 복사한 뒤 아래에 붙여넣으세요. (문자 앱에서 그 문자를 <b>공유 → 현미숙 FC</b>로 보내도 바로 들어와요)</p>
     <textarea id="iqTxt" style="min-height:150px" placeholder="[상담신청]&#10;성함: 홍길동&#10;연락처: 010-1234-5678&#10;…" oninput="inquiryPreview()">${esc(prefill || '')}</textarea>
     <div id="iqPrev" style="margin:8px 0"></div>
-    <button class="btn hms-btn" style="width:100%" onclick="inquirySave()">📥 관심고객으로 접수</button>`);
+    <button class="btn hms-btn" style="width:100%" onclick="inquirySave()">🏢 CEO로 접수</button>`);
   inquiryPreview();
 }
 function inquiryPreview() {
   const o = parseApply($('iqTxt').value);
   $('iqPrev').innerHTML = o ? `<div class="card" style="font-size:14px">👤 <b>${esc(o.name)}</b> ${esc(o.phone)}<br>${esc([o.ind, o.topic, o.time && '희망 ' + o.time, o.ch && '유입 ' + o.ch].filter(Boolean).join(' · '))}<br><span class="muted">개인정보 동의: ${esc(o.agree || '기록 없음')} · 광고 수신: ${esc(o.ad || '-')}</span></div>` : '<span class="muted">아직 [상담신청] 내용을 못 찾았어요.</span>';
 }
-// 상담 신청 한 건 → 관심고객 (자동 접수·문자 붙여넣기·공유 모두 여기로). 같은 번호면 새로 만들지 않고 메모에 '다시 신청' 추가
+// 상담 신청 한 건 → CEO (자동 접수·문자 붙여넣기·공유 모두 여기로. 사용자 요청: DB는 모두 CEO로). 같은 번호면 새로 만들지 않고 메모에 '다시 신청' 추가
 function addApplyLead(o, isNew) {
-  const digits = String(o.phone || '').replace(/\D/g, ''), old = digits && db.dbleads.find(x => String(x.phone || '').replace(/\D/g, '') === digits);
-  const lines = [o.ind && '업종: ' + o.ind, o.region && '사업 지역: ' + o.region, o.time && '연락 가능 시간: ' + o.time, o.q && '문의: ' + o.q,
+  const digits = String(o.phone || '').replace(/\D/g, ''), same = x => digits && String(x.phone || '').replace(/\D/g, '') === digits;
+  const old = db.ceos.find(same);
+  const lines = [o.ind && '업종: ' + o.ind, o.region && '사업 지역: ' + o.region, o.topic && '상담 희망: ' + o.topic, o.time && '연락 가능 시간: ' + o.time, o.q && '문의: ' + o.q,
     '개인정보 수집·이용 동의: ' + (o.agree || '기록 없음'), '마케팅 정보 수신: ' + (o.ad || '기록 없음')].filter(Boolean);
   if (old) { old.memo = [old.memo, `[${today()} 다시 상담 신청 · ${o.ch || ''} · ${o.topic || ''}]`, ...lines].filter(Boolean).join('\n'); if (isNew) old.isNew = true; return {id: old.id, dup: true}; }
   const id = uid();
-  db.dbleads.push({id, created: today(), received: o.day || today(), calls: 0, logs: [], status: '미연락', name: o.name || o.phone, phone: phoneVal(o.phone || ''),
-    source: '상담신청·' + (o.ch || '상담 신청 페이지'), interest: o.topic, isNew: !!isNew, memo: ['[상담 신청 페이지로 접수]', ...lines].join('\n')});
+  db.ceos.push({id, created: o.day || today(), logs: [], issues: [], company: o.name ? `${o.name}${o.ind ? ' (' + o.ind + ')' : ''}` : phoneVal(o.phone || ''), boss: o.name || '', phone: phoneVal(o.phone || ''),
+    industry: o.ind || '', cstatus: '미연락', source: '상담신청·' + (o.ch || '상담 신청 페이지'), isNew: !!isNew, memo: ['[상담 신청 페이지로 접수]', ...lines].join('\n')});
   return {id, dup: false};
 }
 function inquirySave(text) {
   const o = parseApply(text ?? $('iqTxt').value);
   if (!o) return toast('[상담신청] 문자 내용을 붙여넣어 주세요.');
   const {id, dup} = addApplyLead(o);
-  save(); location.hash = 'dbleads'; refresh(); editDb(id);
-  toast(dup ? '이미 있는 관심고객이에요. 다시 신청한 내용을 메모에 붙였어요.' : '📥 관심고객으로 접수했어요. 희망 시간에 연락해 주세요.');
+  save(); location.hash = 'ceo'; refresh(); showCeo(id);
+  toast(dup ? '이미 있는 CEO 고객이에요. 다시 신청한 내용을 메모에 붙였어요.' : '🏢 CEO로 접수했어요. 희망 시간에 연락해 주세요.');
 }
 /* ── 📨 상담 신청 자동 접수 (무료 Firebase '받은편지함')
    고객이 apply.html?u=…로 신청 → 신청 내용을 FC 공개키로 암호화해 hmsfc_in/{uid}/leads에 넣음(고객은 읽을 수 없음)
@@ -3374,10 +3377,10 @@ async function inboxCheck(manual) {
   finally { INBOX.busy = false; }
 }
 function inboxNotify(n) {
-  toast(`🔔 새 상담 신청 ${n}건이 들어왔어요!`);
+  toast(`🔔 새 상담 신청 ${n}건이 CEO에 들어왔어요!`);
   try {
     if (window.Notification && Notification.permission === 'granted' && navigator.serviceWorker)
-      navigator.serviceWorker.ready.then(r => r.showNotification('🔔 새 상담 신청', {body: `${n}건이 관심고객에 들어왔어요.`, icon: 'icon-192.png', tag: 'hmsfc-lead'}));
+      navigator.serviceWorker.ready.then(r => r.showNotification('🔔 새 상담 신청', {body: `${n}건이 CEO에 들어왔어요.`, icon: 'icon-192.png', tag: 'hmsfc-lead'}));
   } catch (e) {}
 }
 setInterval(() => { if (!document.hidden) inboxCheck(); }, 120000);
@@ -3387,6 +3390,7 @@ function funnelOpen() {
   const rows = {};
   const add = (ch, k) => { (rows[ch] = rows[ch] || {q: 0, c: 0, w: 0})[k]++; };
   db.dbleads.forEach(d => { const ch = chOf(d.source); add(ch, 'q'); if (['통화완료', '약속잡음'].includes(d.status)) add(ch, 'c'); });
+  db.ceos.filter(c => c.source).forEach(c => { const ch = chOf(c.source); add(ch, 'q'); if (['통화완료', '약속잡음'].includes(c.cstatus)) add(ch, 'c'); });
   db.customers.forEach(c => { const s = convSrc(c); if (s === null) return; const ch = chOf(s); add(ch, 'q'); add(ch, 'c'); if (['계약', '유지관리'].includes(c.stage)) add(ch, 'w'); });
   const list = Object.entries(rows).sort((a, b) => b[1].q - a[1].q);
   openSheet('📈 유입 성과 분석', `<p class="muted" style="margin-top:0">관심고객의 '출처'로 채널을 나눠요. 상담 = 통화완료·약속잡음 또는 고객으로 옮김, 계약 = 고객 단계가 계약·유지관리.</p>
@@ -3411,10 +3415,16 @@ function followOpen() {
     items.push({k: 'd', p: d, act, pri});
   });
   db.customers.forEach(c => { if (c.next && c.next <= t) items.push({k: 'c', p: c, act: `다음 연락일 ${mdK(c.next)} · ${c.nextTodo || '[상담 준비 메모]로 준비하고 연락'}`, pri: 1}); });
+  db.ceos.forEach(c => {
+    const st = c.cstatus || '미연락';
+    if (c.source && st === '미연락') items.push({k: 'ceo', p: {...c, name: c.boss || c.company}, act: '상담 신청하신 분 · 오늘 첫 통화 (희망 시간 확인)', pri: /^상담신청/.test(c.source) ? 0 : 2});
+    else if (st === '부재') items.push({k: 'ceo', p: {...c, name: c.boss || c.company}, act: '부재 문자 남기고 다른 시간대에 다시', pri: 1});
+    else if (c.next && c.next <= t) items.push({k: 'ceo', p: {...c, name: c.boss || c.company}, act: `미팅일 ${mdK(c.next)} · ${c.nextTodo || '이슈별 제안 메모로 준비'}`, pri: 1});
+  });
   items.sort((a, b) => a.pri - b.pri);
   openSheet('🧠 후속 상담 도우미', `<p class="muted" style="margin-top:0">연락 상태와 날짜를 보고 다음에 할 일을 추천해요 (앱 안 규칙 · 외부 AI로 보내지 않음). 누르면 그 사람 창이 열리고, 상담 문구도 바로 만들 수 있어요.</p>
-    <ul class="list">${items.slice(0, 40).map(({k, p, act}) => `<li class="item" onclick="SHOW['${k}']('${p.id}')"><div class="avatar">${k === 'd' ? '📥' : esc(p.name.slice(0, 1))}</div>
-      <div class="body"><div class="name">${esc(p.name)} <span class="muted" style="font-size:12px">${k === 'd' ? esc(p.status || '미연락') : '고객'}</span></div><div class="meta">${esc(act)}</div></div></li>`).join('') || '<li class="empty">지금 따로 챙길 사람이 없어요 👍</li>'}</ul>`);
+    <ul class="list">${items.slice(0, 40).map(({k, p, act}) => `<li class="item" onclick="SHOW['${k}']('${p.id}')"><div class="avatar">${k === 'd' ? '📥' : k === 'ceo' ? '🏢' : esc(p.name.slice(0, 1))}</div>
+      <div class="body"><div class="name">${esc(p.name)} <span class="muted" style="font-size:12px">${k === 'd' ? esc(p.status || '미연락') : k === 'ceo' ? 'CEO' : '고객'}</span></div><div class="meta">${esc(act)}</div></div></li>`).join('') || '<li class="empty">지금 따로 챙길 사람이 없어요 👍</li>'}</ul>`);
 }
 
 /* ───────── 4~6단계 (DB자동발굴 화면 안: 영업 현황 · AI 영업비서 · 이번 주 콘텐츠) ─────────
@@ -3429,7 +3439,7 @@ function dashData() {
     ['오늘 신규 DB', ppl.filter(([k, p]) => (k === 'd' ? (p.received || p.created) : p.created) === t), '명', true],
     ['전체 고객', ppl, '명'],
     ['상담 예정', ppl.filter(([k, p]) => pStatus(k, p) === '약속잡음' && (!p.next || p.next >= t)), '명', true],
-    ['미연락 고객', db.dbleads.filter(d => (d.status || '미연락') === '미연락').map(p => ['d', p]), '명', true],
+    ['미연락 고객', [...db.dbleads.filter(d => (d.status || '미연락') === '미연락').map(p => ['d', p]), ...db.ceos.filter(c => c.source && (c.cstatus || '미연락') === '미연락').map(p => ['ceo', p])], '명', true],
     ['보장분석 진행', db.customers.filter(c => c.stage === '상담중').map(p => ['c', p]), '명'],
     ['제안 진행', db.customers.filter(c => c.stage === '제안').map(p => ['c', p]), '명'],
     ['신규 계약 (이번 달)', perf.filter(p => (p.type || '신계약') === '신계약'), '건'],
@@ -3440,8 +3450,9 @@ function dashData() {
 }
 function renderSales() {
   if (!$('salesDash')) return;
-  const nl = db.dbleads.filter(d => d.isNew);
-  $('fdNewLeads').innerHTML = nl.length ? `<div class="notice" style="background:#eef7f2;border-color:#4caf50;color:#0d3b2e;cursor:pointer" onclick="location.hash='dbleads'">🔔 <b>새 상담 신청 ${nl.length}건</b> — ${nl.slice(0, 3).map(d => esc(d.name)).join(', ')}${nl.length > 3 ? ' 외' : ''} <b>›</b></div>` : '';
+  const nl = [...db.ceos.filter(d => d.isNew).map(d => d.boss || d.company), ...db.dbleads.filter(d => d.isNew).map(d => d.name)];
+  $('fdNewLeads').innerHTML = nl.length ? `<div class="notice" style="background:#eef7f2;border-color:#4caf50;color:#0d3b2e;cursor:pointer" onclick="location.hash='ceo'">🔔 <b>새 상담 신청 ${nl.length}건</b> — ${nl.slice(0, 3).map(esc).join(', ')}${nl.length > 3 ? ' 외' : ''} <b>›</b></div>` : '';
+  if ($('hubCeoCnt')) $('hubCeoCnt').textContent = `CEO ${db.ceos.length}곳 보기 ›`;
   $('salesDash').innerHTML = dashData().map(([k, v, u, hot, sub], i) => {
     const n = Array.isArray(v) ? v.length : v;
     return `<button class="${hot && n ? 'hot' : ''}" onclick="dashOpen(${i})"><small>${k}</small><b>${n}${u}${sub ? `<span class="muted" style="font-size:12px;font-weight:600"> · ${sub}</span>` : ''}</b></button>`;
@@ -3468,10 +3479,11 @@ function secSchedule() {
 }
 // 📵 미상담 고객: 관심고객 미연락 (상담 신청 먼저, 오래된 순)
 function secUncontacted() {
-  const l = db.dbleads.filter(d => (d.status || '미연락') === '미연락').sort((a, b) => !!/^상담신청/.test(b.source || '') - !!/^상담신청/.test(a.source || '') || (a.received || '').localeCompare(b.received || ''));
-  openSheet('📵 미상담 고객', `<p class="muted" style="margin-top:0">아직 연락하지 못한 관심고객이에요. 상담 신청으로 온 분이 맨 위예요. 신청한 날부터 며칠 지났는지 보여요.</p>
-    <ul class="list">${l.map(d => `<li class="item" onclick="showDb('${d.id}')"><div class="avatar">📥</div><div class="body"><div class="name">${esc(d.name)}${d.isNew ? ' <span class="tag" style="background:#e8f6ec;color:#1e7b34">NEW</span>' : ''}</div>
-      <div class="meta">${esc([d.source, d.interest, d.received && (dayDiff(d.received, today()) ? dayDiff(d.received, today()) + '일째' : '오늘 신청')].filter(Boolean).join(' · '))}</div></div></li>`).join('') || '<li class="empty">미연락 고객이 없어요 👍</li>'}</ul>`);
+  const l = [...db.ceos.filter(c => c.source && (c.cstatus || '미연락') === '미연락').map(p => ['ceo', p, p.created]), ...db.dbleads.filter(d => (d.status || '미연락') === '미연락').map(p => ['d', p, p.received || p.created])]
+    .sort((a, b) => !!/^상담신청/.test(b[1].source || '') - !!/^상담신청/.test(a[1].source || '') || (a[2] || '').localeCompare(b[2] || ''));
+  openSheet('📵 미상담 고객', `<p class="muted" style="margin-top:0">아직 연락하지 못한 분이에요(상담 신청으로 CEO에 들어온 분 + 관심고객). 상담 신청이 맨 위예요. 신청한 날부터 며칠 지났는지 보여요.</p>
+    <ul class="list">${l.map(([k, d, day]) => `<li class="item" onclick="SHOW['${k}']('${d.id}')"><div class="avatar">${k === 'ceo' ? '🏢' : '📥'}</div><div class="body"><div class="name">${esc(k === 'ceo' ? (d.boss || d.company) : d.name)}${d.isNew ? ' <span class="tag" style="background:#e8f6ec;color:#1e7b34">NEW</span>' : ''}</div>
+      <div class="meta">${esc([d.source, d.interest || d.industry, day && (dayDiff(day, today()) ? dayDiff(day, today()) + '일째' : '오늘 신청')].filter(Boolean).join(' · '))}</div></div></li>`).join('') || '<li class="empty">미연락 고객이 없어요 👍</li>'}</ul>`);
 }
 // 📝 상담 준비 · 요약: 고객을 고르면 지난 기록을 짧게 정리
 function secPrep() {
@@ -3505,7 +3517,7 @@ function prepShow(k, id) {
 function secIndustry() {
   const ind = p => { const m = String(p.memo || '').match(/업종:\s*(.+)/); return m ? m[1].trim() : ''; };
   const cnt = {}; const add = (k, w) => { k = k || '업종 모름'; (cnt[k] = cnt[k] || {d: 0, f: 0})[w]++; };
-  db.dbleads.forEach(d => add(ind(d), 'd')); db.customers.forEach(c => { const v = ind(c); if (v) add(v, 'd'); });
+  db.dbleads.forEach(d => add(ind(d), 'd')); db.customers.forEach(c => { const v = ind(c); if (v) add(v, 'd'); }); db.ceos.forEach(c => { if (c.source || c.industry) add(c.industry || ind(c), 'd'); });
   (db.finds || []).forEach(f => add((f.ind || '').split(' > ')[0], 'f'));
   const rows = Object.entries(cnt).sort((a, b) => (b[1].d + b[1].f) - (a[1].d + a[1].f));
   openSheet('🏷️ 업종별 고객 분류', `<p class="muted" style="margin-top:0">상담 신청 업종(관심고객·옮긴 고객)과 DB자동발굴 업종이에요.</p>
@@ -3517,8 +3529,8 @@ function secMonthly() {
   const m = thisMonth(), d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); const pm = ymd(d).slice(0, 7);
   const calc = mm => {
     const s = monthStats(mm), inM = x => (x || '').startsWith(mm);
-    const leads = db.dbleads.filter(x => inM(x.received || x.created)).length + db.customers.filter(c => inM(c.created) && convSrc(c) !== null).length;
-    const apply = db.dbleads.filter(x => inM(x.received || x.created) && /^상담신청/.test(x.source || '')).length;
+    const leads = db.dbleads.filter(x => inM(x.received || x.created)).length + db.customers.filter(c => inM(c.created) && convSrc(c) !== null).length + db.ceos.filter(c => c.source && inM(c.created)).length;
+    const apply = [...db.dbleads, ...db.ceos].filter(x => inM(x.received || x.created) && /^상담신청/.test(x.source || '')).length;
     return {leads, apply, newCust: s.newCust, consult: s.consult, contract: s.contract, premium: s.premium, finds: (db.finds || []).filter(f => inM(f.created)).length};
   };
   const a = calc(m), b = calc(pm), g = db.goals[m] || {};
@@ -3529,7 +3541,7 @@ function secMonthly() {
   if (a.apply < b.apply) tips.push('상담 신청이 지난달보다 줄었어요. 이번 주 콘텐츠를 올려 보세요.');
   if (!tips.length) tips.push('지난달과 비슷하거나 좋아요. 지금 흐름을 이어가세요 👍');
   openSheet(`📈 ${+m.slice(5)}월 실적 분석`, `<table style="width:100%;border-collapse:collapse;font-size:14px"><tr style="text-align:left;color:var(--sub)"><th></th><th>이번 달</th><th>지난달</th><th></th></tr>
-    ${row('발굴 후보', 'finds')}${row('관심고객 유입', 'leads')}${row('└ 상담 신청', 'apply')}${row('신규 고객', 'newCust', v => v, Number(g.newCust) || 0)}${row('미팅', 'consult', v => v, (Number(g.consult) || 0) * 20)}${row('계약', 'contract', v => v, Number(g.contract) || 0)}${row('월 보험료', 'premium', v => shortWon(v) + '원', Number(g.premium) || 0)}</table>
+    ${row('발굴 후보', 'finds')}${row('DB 유입', 'leads')}${row('└ 상담 신청', 'apply')}${row('신규 고객', 'newCust', v => v, Number(g.newCust) || 0)}${row('미팅', 'consult', v => v, (Number(g.consult) || 0) * 20)}${row('계약', 'contract', v => v, Number(g.contract) || 0)}${row('월 보험료', 'premium', v => shortWon(v) + '원', Number(g.premium) || 0)}</table>
     <div class="card hms-card" style="margin-top:12px"><h3>🧭 이번 달 추천</h3><ul style="margin:0;padding-left:18px">${tips.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`);
 }
 /* ✍️ 이번 주 콘텐츠: 주제 모음에서 주마다 3개 (개인사업자·자영업자·CEO) → 블로그·쇼츠·인스타·홍보 문구 (상담 신청 링크 포함)
