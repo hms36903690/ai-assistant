@@ -446,7 +446,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-206';
+const APP_VERSION = '2026.11.17-207';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -1736,7 +1736,7 @@ function renderHome() {
   const nP = db.prospects.length + [...db.customers, ...db.dbleads, ...db.ceos].filter(x => x.pros).length;
   $('homeStats').innerHTML = [
     ['전체 고객', (nC + nD + nE) + '명', `고객 ${nC} · 관심 ${nD} · CEO ${nE}`], ['연락할 고객', todo.length + '건'],
-    ['이번 달 상담', s.consult + '건'], ['이번 달 계약', s.contract + '건'],
+    ['이번 달 미팅', s.consult + '건'], ['이번 달 계약', s.contract + '건'],
   ].map(([k, v, sub]) => `<div class="stat"><small>${k}</small><b>${v}</b>${sub ? `<span class="sub">${sub}</span>` : ''}</div>`).join('');
   $('qcC').textContent = nC + '명'; $('qcD').textContent = nD + '명'; $('qcP').textContent = nP + '명'; $('qcE').textContent = nE + '곳';
 
@@ -2044,7 +2044,7 @@ function saveCustomer(id) {
   save(); toast('저장했습니다.');
   showCustomer(c ? c.id : db.customers[db.customers.length - 1].id); refresh();
 }
-// 고객·CEO 통화 결과 (관심고객과 같은 버튼). 상담 기록(실제 상담 숫자)에는 넣지 않음
+// 고객·CEO 통화 결과 (관심고객과 같은 버튼). 상담 기록(미팅 숫자)에는 넣지 않음
 const callBtns = (kind, p) => `<div class="call-btns" style="margin-bottom:12px">${['부재', '통화완료', '약속잡음', '보류', '거절'].map(r => `<button class="btn sec${p.cstatus === r ? ' on' : ''}" onclick="personCallResult('${kind}','${p.id}','${r}')">${{'부재': '📵 부재', '통화완료': '☎️ 통화완료', '약속잡음': '📅 약속잡음', '보류': '⏸ 보류', '거절': '🙅 거절'}[r]}</button>`).join('')}</div>`;
 function personCallResult(kind, id, result) {
   const c = findPerson(kind, id); if (!c) return;
@@ -2725,7 +2725,7 @@ function showCeo(id) {
 /* ───────── 목표 ───────── */
 const GOAL_FIELDS = [
   {k: 'newCust', label: '신규 고객', type: 'number', unit: '명'},
-  {k: 'consult', label: '실제 상담', type: 'number', unit: '건'},
+  {k: 'consult', label: '미팅', type: 'number', unit: '건'}, // 예전 이름 '실제 상담'
   {k: 'contract', label: '계약', type: 'number', unit: '건'},
   {k: 'premium', label: '월 보험료 합계', type: 'money', full: true}, // 한 줄 전체로 넓게
 ];
@@ -2733,8 +2733,8 @@ const GOAL_FIELDS = [
 function goalHint(k, g) {
   const n = k => Number(g[k]) || 0, day = v => +(v / 20).toFixed(1);
   if (k === 'newCust') return n('newCust') ? `하루 ${day(n('newCust'))}명 × 20일` : '하루 ○명 × 20일';
-  if (k === 'consult') return n('consult') ? `하루 ${day(n('consult'))}건` : '하루 ○건';
-  if (k === 'contract') return n('contract') && n('consult') ? `상담 대비 ${Math.round(n('contract') / n('consult') * 100)}%` : '상담 대비 ○%';
+  if (k === 'consult') return n('consult') ? `하루 ${day(n('consult'))}건 × 20일` : '하루 2건 × 20일 = 40건';
+  if (k === 'contract') return n('contract') && n('consult') ? `미팅 대비 ${Math.round(n('contract') / n('consult') * 100)}%` : '미팅 대비 ○%';
   if (k === 'premium') return n('premium') && n('contract') ? `계약당 평균 ${shortWon(Math.round(n('premium') / n('contract')))}원` : '계약당 평균 ○원';
 }
 function goalFormHtml(g) {
@@ -3207,6 +3207,11 @@ if (Array.isArray(db.memos) && db.memos.length) {
 if (!db.settings.weeklyV3) { db.weekly = defaultWeekly(); db.settings.weeklyV2 = db.settings.weeklyV3 = true; save(); } // 2026-11-05 새 계획표
 // 한 번만: 이미 저장된 전화번호도 '-' 넣은 모양으로 맞추기
 // 고객 진행 단계 '관심' → '일반' (한 번만)
+// 목표 '실제 상담' → '미팅', 이번 달 미팅 목표는 하루 2건 × 20일 = 40건 (한 번만)
+if (!db.settings.meetV1) {
+  const m = thisMonth(); db.goals[m] = db.goals[m] || {}; db.goals[m].consult = '40';
+  db.settings.meetV1 = true; save();
+}
 if (!db.settings.stageV1) {
   db.customers.forEach(c => { if (c.stage === '관심') c.stage = '일반'; });
   db.settings.stageV1 = true; save();
