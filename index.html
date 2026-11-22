@@ -560,7 +560,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.23-257';
+const APP_VERSION = '2026.11.23-258';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -2755,8 +2755,8 @@ const CEO_FIELDS = [
   {k: 'issues', label: '관심 이슈', type: 'checks', options: CEO_ISSUES, full: true},
   {k: 'memo', label: '메모', type: 'textarea', full: true},
 ];
-// 🕒 상담 신청 시각 (메모의 '🕒 신청 시각: 2026-11-23 오후 3:07' 줄에서 꺼냄) → 목록 칸 맨 위와 자세히 보기 맨 위에 표시
-const applyWhen = c => { const m = String(c.memo || '').match(/🕒 (신청|접수) 시각: (\d{4})-(\d{2})-(\d{2}) (오전|오후) (\d{1,2}:\d{2})/); return m ? {kind: m[1], full: `${m[2]}-${m[3]}-${m[4]} ${m[5]} ${m[6]}`, short: `${+m[3]}/${+m[4]} ${m[5]} ${m[6]}`} : null; };
+// 🕒 상담 신청 시각 (c.applyAt = '신청|2026-11-23 오후 3:07') → 목록 칸 맨 위와 자세히 보기 맨 위에만 표시 (메모에는 안 적음)
+const applyWhen = c => { const m = String(c.applyAt || '').match(/^(신청|접수)\|(\d{4})-(\d{2})-(\d{2}) (오전|오후) (\d{1,2}:\d{2})/); return m ? {kind: m[1], full: `${m[2]}-${m[3]}-${m[4]} ${m[5]} ${m[6]}`, short: `${+m[3]}/${+m[4]} ${m[5]} ${m[6]}`} : null; };
 function renderCeos() {
   const q = $('ceoSearch').value.trim().toLowerCase();
   setStarFilterBtn('ceoStarBtn', starOnly.ceo);
@@ -3294,14 +3294,14 @@ function addApplyLead(o, isNew) {
   // 🕒 신청 시각: 자동 접수는 고객이 [신청하기]를 누른 시각, 문자 붙여넣기는 접수한 시각
   const t = new Date(o.at || Date.now()), ampm = t.getHours() < 12 ? '오전' : '오후', h12 = t.getHours() % 12 || 12;
   const when = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')} ${ampm} ${h12}:${String(t.getMinutes()).padStart(2, '0')}`;
-  const lines = [(o.at ? '🕒 신청 시각: ' : '🕒 접수 시각: ') + when, o.ind && '업종: ' + o.ind, o.region && '사업 지역: ' + o.region, o.topic && '상담 희망: ' + o.topic, o.time && '연락 가능 시간: ' + o.time, o.q && '문의: ' + o.q,
+  const lines = [o.ind && '업종: ' + o.ind, o.region && '사업 지역: ' + o.region, o.topic && '상담 희망: ' + o.topic, o.time && '연락 가능 시간: ' + o.time, o.q && '문의: ' + o.q,
     '개인정보 수집·이용 동의: ' + (o.agree || '기록 없음'), '마케팅 정보 수신: ' + (o.ad || '기록 없음')].filter(Boolean);
   // 신청서마다 따로 한 칸씩 (같은 번호로 또 신청해도 합치지 않고 새로 만듦 → 메모에 '전에도 신청' 표시만)
   const before = db.ceos.filter(same).length;
-  if (before) lines.splice(1, 0, `※ 같은 번호로 ${before + 1}번째 신청이에요 (예전 신청은 CEO 목록에 따로 있어요)`);
+  if (before) lines.unshift(`※ 같은 번호로 ${before + 1}번째 신청이에요 (예전 신청은 CEO 목록에 따로 있어요)`);
   const id = uid();
   db.ceos.push({id, created: o.day || today(), logs: [], issues: [], company: o.name ? `${o.name}${o.ind ? ' (' + o.ind + ')' : ''}` : phoneVal(o.phone || ''), boss: o.name || '', phone: phoneVal(o.phone || ''),
-    industry: o.ind || '', cstatus: '미연락', source: '상담신청·' + (o.ch || '상담 신청 페이지'), isNew: !!isNew, memo: ['[상담 신청 페이지로 접수]', ...lines].join('\n')});
+    industry: o.ind || '', cstatus: '미연락', source: '상담신청·' + (o.ch || '상담 신청 페이지'), isNew: !!isNew, applyAt: (o.at ? '신청|' : '접수|') + when, memo: ['[상담 신청 페이지로 접수]', ...lines].join('\n')});
   return {id, dup: !!before};
 }
 function inquirySave(text) {
@@ -4284,6 +4284,12 @@ if (!db.settings.applySplitV1) {
     });
   });
   db.settings.applySplitV1 = true; save();
+}
+// 메모에 적혀 있던 '🕒 신청 시각' 줄은 빼서 applyAt 칸으로 옮김 (자세히 보기에 두 번 나오지 않게)
+if (!db.settings.applyAtV1) {
+  db.ceos.forEach(c => { const m = String(c.memo || '').match(/\n?🕒 (신청|접수) 시각: ([^\n]+)/); if (!m) return;
+    if (!c.applyAt) c.applyAt = m[1] + '|' + m[2].trim(); c.memo = c.memo.replace(m[0], ''); });
+  db.settings.applyAtV1 = true; save();
 }
 if (!db.settings.stageV1) {
   db.customers.forEach(c => { if (c.stage === '관심') c.stage = '일반'; });
