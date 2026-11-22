@@ -560,7 +560,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.23-250';
+const APP_VERSION = '2026.11.23-251';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -3744,7 +3744,7 @@ function ntfyOpen() {
     <p class="muted" style="font-size:12px;margin:8px 0 0">알림 이름은 명함·신청 링크 안에 들어가요. 누군가 알게 되면 장난 알림이 올 수는 있지만, 고객 정보를 볼 수는 없어요.</p>`);
 }
 function ntfyTest() {
-  fetch('https://ntfy.sh/' + db.settings.ntfyTopic, {method: 'POST', headers: {'Tags': 'bell'}, body: '🔔 시험 알림이에요. 상담 신청이 들어오면 이렇게 알려 드려요.'})
+  fetch('https://ntfy.sh/' + db.settings.ntfyTopic, {method: 'POST', headers: {'Tags': 'bell', 'Click': 'https://hms36903690.github.io/ai-assistant/index.html#ceo'}, body: '🔔 시험 알림이에요. 알림을 누르면 영업비서 앱 CEO 화면이 열려요.'})
     .then(r => toast(r.ok ? '시험 알림을 보냈어요. 휴대폰을 확인해 보세요.' : '알림을 보내지 못했어요 (' + r.status + ')')).catch(() => toast('알림을 보내지 못했어요. 인터넷 연결을 확인해 주세요.'));
 }
 async function cardShare(url) {
