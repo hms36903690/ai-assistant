@@ -560,7 +560,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.23-253';
+const APP_VERSION = '2026.11.23-254';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -3290,18 +3290,20 @@ function addApplyLead(o, isNew) {
   const old = db.ceos.find(same);
   const lines = [o.ind && '업종: ' + o.ind, o.region && '사업 지역: ' + o.region, o.topic && '상담 희망: ' + o.topic, o.time && '연락 가능 시간: ' + o.time, o.q && '문의: ' + o.q,
     '개인정보 수집·이용 동의: ' + (o.agree || '기록 없음'), '마케팅 정보 수신: ' + (o.ad || '기록 없음')].filter(Boolean);
-  if (old) { old.memo = [old.memo, `[${today()} 다시 상담 신청 · ${o.ch || ''} · ${o.topic || ''}]`, ...lines].filter(Boolean).join('\n'); if (isNew) old.isNew = true; return {id: old.id, dup: true}; }
+  // 신청서마다 따로 한 칸씩 (같은 번호로 또 신청해도 합치지 않고 새로 만듦 → 메모에 '전에도 신청' 표시만)
+  const before = db.ceos.filter(same).length;
+  if (before) lines.unshift(`※ 같은 번호로 ${before + 1}번째 신청이에요 (예전 신청은 CEO 목록에 따로 있어요)`);
   const id = uid();
   db.ceos.push({id, created: o.day || today(), logs: [], issues: [], company: o.name ? `${o.name}${o.ind ? ' (' + o.ind + ')' : ''}` : phoneVal(o.phone || ''), boss: o.name || '', phone: phoneVal(o.phone || ''),
     industry: o.ind || '', cstatus: '미연락', source: '상담신청·' + (o.ch || '상담 신청 페이지'), isNew: !!isNew, memo: ['[상담 신청 페이지로 접수]', ...lines].join('\n')});
-  return {id, dup: false};
+  return {id, dup: !!before};
 }
 function inquirySave(text) {
   const o = parseApply(text ?? $('iqTxt').value);
   if (!o) return toast('[상담신청] 문자 내용을 붙여넣어 주세요.');
   const {id, dup} = addApplyLead(o);
   save(); location.hash = 'ceo'; refresh(); showCeo(id);
-  toast(dup ? '이미 있는 CEO 고객이에요. 다시 신청한 내용을 메모에 붙였어요.' : '🏢 CEO로 접수했어요. 희망 시간에 연락해 주세요.');
+  toast(dup ? '🏢 CEO로 접수했어요. (같은 번호로 전에도 신청한 분이에요)' : '🏢 CEO로 접수했어요. 희망 시간에 연락해 주세요.');
 }
 /* ── 📨 상담 신청 자동 접수 (무료 Firebase '받은편지함')
    고객이 apply.html?u=…로 신청 → 신청 내용을 FC 공개키로 암호화해 hmsfc_in/{uid}/leads에 넣음(고객은 읽을 수 없음)
@@ -4261,6 +4263,21 @@ if (!db.settings.meetV2) {
   Object.values(db.goals).forEach(g => { if (g && Number(g.consult) > 10) g.consult = String(Math.max(1, Math.round(Number(g.consult) / 20))); });
   const m = thisMonth(); db.goals[m] = db.goals[m] || {}; db.goals[m].consult = '2';
   db.settings.meetV1 = db.settings.meetV2 = true; save();
+}
+// 예전에 한 칸 메모에 합쳐 붙은 '다시 상담 신청' 신청서들을 신청서마다 따로 나눔 (id를 정해진 규칙으로 만들어 다른 기기와 겹치지 않음)
+if (!db.settings.applySplitV1) {
+  db.ceos.slice().forEach(c => {
+    const parts = String(c.memo || '').split(/\n(?=\[\d{4}-\d{2}-\d{2} 다시 상담 신청 · )/);
+    if (parts.length < 2) return;
+    c.memo = parts[0];
+    parts.slice(1).forEach((p, i) => {
+      const id = c.id + '_s' + (i + 1); if (db.ceos.some(x => x.id === id)) return;
+      const [head, ...rest] = p.split('\n'), m = head.match(/^\[(\d{4}-\d{2}-\d{2}) 다시 상담 신청 · ([^·\]]*)/);
+      db.ceos.push({id, created: m ? m[1] : today(), logs: [], issues: [], company: c.company, boss: c.boss, phone: c.phone, industry: c.industry || '', cstatus: '미연락',
+        source: '상담신청·' + ((m && m[2].trim()) || '상담 신청 페이지'), isNew: false, memo: ['[상담 신청 페이지로 접수]', `※ 같은 번호로 ${i + 2}번째 신청이에요`, ...rest].join('\n')});
+    });
+  });
+  db.settings.applySplitV1 = true; save();
 }
 if (!db.settings.stageV1) {
   db.customers.forEach(c => { if (c.stage === '관심') c.stage = '일반'; });
