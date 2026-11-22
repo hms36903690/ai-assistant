@@ -118,7 +118,7 @@ function kakaoShare(c) {
       try {
         if (!Kakao.isInitialized()) Kakao.init(c.kakaoKey);
         const tags = String(c.badges || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 3).join(' · ');
-        const url = location.href, img = /^https:\/\//.test(c.kakaoImg || '') ? c.kakaoImg : 'https://hms36903690.github.io/ai-assistant/card-og.png';
+        const url = /[?&]u=/.test(location.search) ? location.href.split('#')[0] : location.href, img = /^https:\/\//.test(c.kakaoImg || '') ? c.kakaoImg : 'https://hms36903690.github.io/ai-assistant/card-og.png';
         Kakao.Share.sendDefault({objectType: 'feed',
           content: {title: `${c.name || ''} ${[c.org, c.title].filter(Boolean).join(' · ')}`.trim(), description: tags || c.intro || '디지털 명함을 확인하세요.',
             imageUrl: img, imageWidth: 640, imageHeight: c.kakaoImg ? 640 : 336, link: {mobileWebUrl: url, webUrl: url}},
