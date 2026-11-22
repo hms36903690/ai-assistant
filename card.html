@@ -78,7 +78,7 @@ function render(c) {
   ${pts.length ? `<div class="card"><h2>이런 일을 해요</h2><ul>${pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>` : ''}
   <div class="card"><h2>연락처</h2>
     ${c.phone ? `<div class="row"><small>휴대폰</small><a href="tel:${tel}">${esc(c.phone)}</a></div>` : ''}
-    ${c.office ? `<div class="row"><small>사무실</small><a href="tel:${esc(String(c.office).replace(/[^\d+]/g, ''))}">${esc(c.office)}</a></div>` : ''}
+    ${c.office ? `<div class="row"><small>고객센터</small><a href="tel:${esc(String(c.office).replace(/[^\d+]/g, ''))}">${esc(c.office)}</a></div>` : ''}
     ${c.email ? `<div class="row"><small>이메일</small><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div>` : ''}
     ${c.address ? `<div class="row"><small>주소</small><a href="https://map.naver.com/p/search/${encodeURIComponent(c.address)}" target="_blank" rel="noopener">${esc(c.address)}</a></div>` : ''}
     ${home ? `<div class="row"><small>블로그·홈</small><a href="${esc(home)}" target="_blank" rel="noopener">${esc(home.replace(/^https?:\/\//, ''))}</a></div>` : ''}
