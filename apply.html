@@ -111,7 +111,14 @@
 //  · u가 있으면: 신청 내용을 FC의 공개키로 암호화해서 Firebase '받은편지함'에 저장 → FC 앱이 열릴 때 관심고객으로 자동 접수
 //  · u가 없거나 저장이 안 되면: 고객 휴대폰 문자로 FC 번호(to)에 신청 내용을 보냄 (예비 방법)
 const P = new URLSearchParams(location.search);
-const U = (P.get('u') || '').replace(/[^A-Za-z0-9]/g, ''), to = (P.get('to') || '').replace(/\D/g, ''), ch = (P.get('ch') || '').slice(0, 20);
+const U = (P.get('u') || '').replace(/[^A-Za-z0-9]/g, ''), to = (P.get('to') || '').replace(/\D/g, ''), ch = (P.get('ch') || '').slice(0, 20), NT = P.get('nt') || '';
+// 🔔 FC 휴대폰 알림 (무료 ntfy 앱): 신청이 들어오면 '새 상담 신청' 알림만 보냄 — 고객 이름·번호 같은 개인정보는 넣지 않음
+function notifyFc(topic, ch) {
+  if (!/^[A-Za-z0-9_-]{10,64}$/.test(topic || '')) return;
+  try { fetch('https://ntfy.sh/' + topic, {method: 'POST', keepalive: true, headers: {'Click': 'https://hms36903690.github.io/ai-assistant/#ceo', 'Tags': 'bell'},
+    body: `🔔 새 상담 신청이 들어왔어요 (${String(ch || '').slice(0, 20)}). 영업비서 앱 CEO에서 확인하세요.`}).catch(() => {}); } catch (e) {}
+}
+
 // t=보장분석: 명함의 [무료 보장분석 신청] 버튼으로 왔을 때 → 제목과 상담 분야를 보장분석으로
 const T = P.get('t') || '';
 const $ = id => document.getElementById(id);
@@ -154,12 +161,12 @@ $('send') && ($('send').onclick = async () => {
     q: $('q').value.trim().slice(0, 300), ch: (ch || '상담 신청 페이지') + (T === '보장분석' ? '·보장분석' : ''), agree: `동의 (${day})`, ad: $('ag2').checked ? `동의 (${day})` : '미동의', day};
   $('send').disabled = true; $('send').textContent = '접수하고 있어요…';
   if (U) {
-    try { await saveOnline(o); $('form').style.display = 'none'; $('doneCard').style.display = ''; $('doneCard').scrollIntoView(); return; }
+    try { await saveOnline(o); notifyFc(NT, o.ch); $('form').style.display = 'none'; $('doneCard').style.display = ''; $('doneCard').scrollIntoView(); return; }
     catch (e) { if (!okTo) { $('send').disabled = false; $('send').textContent = '무료 상담 신청하기'; return $('err').textContent = '지금 접수가 잘 안 돼요. 잠시 뒤 다시 눌러 주세요.'; } }
   }
   const body = ['[상담신청]', `성함: ${o.name}`, `연락처: ${o.phone}`, `업종: ${o.ind}`, `지역: ${o.region}`, `상담: ${o.topic}`, `희망시간: ${o.time}`,
     o.q && `문의: ${o.q.slice(0, 200)}`, `유입: ${o.ch}`, `개인정보 수집·이용 동의: ${o.agree}`, `광고성 정보 수신: ${o.ad}`].filter(Boolean).join('\n');
-  smsUrl = `sms:${to}?&body=${encodeURIComponent(body)}`;
+  smsUrl = `sms:${to}?&body=${encodeURIComponent(body)}`; notifyFc(NT, o.ch);
   $('form').style.display = 'none'; $('doneCard').style.display = ''; $('again').style.display = '';
   $('doneTitle').textContent = '📩 문자 앱이 열렸어요';
   $('doneText').innerHTML = '문자 내용을 확인하고 <b>[보내기]</b>를 누르시면 상담 신청이 끝나요.<br>말씀하신 시간에 연락드릴게요. 감사합니다!';

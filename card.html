@@ -150,8 +150,14 @@ function render(c) {
 // 카카오 프로그램은 명함이 열릴 때 미리 불러 둠 → 버튼을 누르는 순간 바로 보내야 휴대폰이 막지 않음
 let kakaoOn = false;
 // 명함 안 상담 신청서: 명함의 apply 주소(u=계정, to=FC 번호, ch=유입)를 그대로 써서 상담 신청 페이지와 같은 방식으로 접수
+// 🔔 FC 휴대폰 알림 (무료 ntfy 앱): 신청이 들어오면 '새 상담 신청' 알림만 보냄 — 고객 이름·번호 같은 개인정보는 넣지 않음
+function notifyFc(topic, ch) {
+  if (!/^[A-Za-z0-9_-]{10,64}$/.test(topic || '')) return;
+  try { fetch('https://ntfy.sh/' + topic, {method: 'POST', keepalive: true, headers: {'Click': 'https://hms36903690.github.io/ai-assistant/#ceo', 'Tags': 'bell'},
+    body: `🔔 새 상담 신청이 들어왔어요 (${String(ch || '').slice(0, 20)}). 영업비서 앱 CEO에서 확인하세요.`}).catch(() => {}); } catch (e) {}
+}
 function applyInfo(a) {
-  try { const u = new URL(a), P = u.searchParams; return {U: (P.get('u') || '').replace(/[^A-Za-z0-9]/g, ''), to: (P.get('to') || '').replace(/\D/g, ''), ch: (P.get('ch') || '디지털 명함').slice(0, 20)}; }
+  try { const u = new URL(a), P = u.searchParams; return {NT: P.get('nt') || '', U: (P.get('u') || '').replace(/[^A-Za-z0-9]/g, ''), to: (P.get('to') || '').replace(/\D/g, ''), ch: (P.get('ch') || '디지털 명함').slice(0, 20)}; }
   catch (e) { return null; }
 }
 const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
@@ -182,10 +188,10 @@ function setupForm(c) {
     const topic = $('fTopic').value, o = {name: nm, phone: ph, topic, q: $('fQ').value.trim().slice(0, 300), ch: A.ch + (/보장분석/.test(topic) ? '·보장분석' : ''), agree: `동의 (${day})`, ad: '미동의', day};
     $('fSend').disabled = true; $('fSend').textContent = '접수하고 있어요…';
     const done = html => { $('formCard').innerHTML = `<div style="text-align:center"><h2>${html}</h2><p style="color:var(--sub)">말씀하신 내용 확인하고 ${esc(c.name || '')} FC가 직접 연락드릴게요. 감사합니다!</p></div>`; };
-    if (A.U) { try { await saveOnline(A.U, o); return done('✅ 상담 신청이 접수됐어요'); } catch (e) {} }
+    if (A.U) { try { await saveOnline(A.U, o); notifyFc(A.NT, o.ch); return done('✅ 상담 신청이 접수됐어요'); } catch (e) {} }
     if (/^01\d{8,9}$/.test(A.to)) {
       const body = ['[상담신청]', `성함: ${o.name}`, `연락처: ${o.phone}`, `상담: ${o.topic}`, o.q && `문의: ${o.q.slice(0, 200)}`, `유입: ${o.ch}`, `개인정보 수집·이용 동의: ${o.agree}`, `광고성 정보 수신: ${o.ad}`].filter(Boolean).join('\n');
-      location.href = `sms:${A.to}?&body=${encodeURIComponent(body)}`;
+      notifyFc(A.NT, o.ch); location.href = `sms:${A.to}?&body=${encodeURIComponent(body)}`;
       return done('📩 문자 앱에서 [보내기]를 눌러 주세요');
     }
     $('fSend').disabled = false; $('fSend').textContent = '상담 신청 보내기'; $('fMsg').textContent = '지금 접수가 잘 안 돼요. 위의 전화·문자로 연락 주세요.';

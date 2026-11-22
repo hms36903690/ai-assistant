@@ -560,7 +560,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.23-249';
+const APP_VERSION = '2026.11.23-250';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -3051,7 +3051,7 @@ function flyerPoints(f) {
 function flyerPrint(fid) {
   db.settings.flyerReviewNo = $('flNo').value.trim(); save();
   const digits = String(db.settings.applyPhone).replace(/\D/g, '');
-  const url = new URL(`apply.html?${db.settings.inboxOn && db.settings.inboxUid ? 'u=' + db.settings.inboxUid + '&' : ''}to=${digits}&ch=${encodeURIComponent('방문 안내문')}`, location.href.split('#')[0].replace(/[?].*$/, '')).href;
+  const url = new URL(`apply.html?${db.settings.inboxOn && db.settings.inboxUid ? 'u=' + db.settings.inboxUid + '&' : ''}to=${digits}&ch=${encodeURIComponent('방문 안내문')}${db.settings.ntfyOn && db.settings.ntfyTopic ? '&nt=' + db.settings.ntfyTopic : ''}`, location.href.split('#')[0].replace(/[?].*$/, '')).href;
   const to = $('flTo').value.trim() || '대표님', pts = $('flPts').value.split('\n').map(x => x.trim()).filter(Boolean), no = db.settings.flyerReviewNo;
   loadQr().then(Q => { const q = Q(0, 'M'); q.addData(url); q.make(); return q.createDataURL(8, 2); }).catch(() => '').then(qr => {
     const e = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
@@ -3236,6 +3236,10 @@ function applyLinkOpen() {
       <p class="muted" style="margin:4px 0 8px;font-size:13px">${auto ? `고객이 신청하면 암호화되어 바로 접수되고, 앱을 열면 <b>관심고객</b>에 자동으로 들어와요.${INBOX.last ? ' (마지막 확인 ' + INBOX.last + ')' : ''}${INBOX.err ? '<br>⚠️ ' + esc(INBOX.err) : ''}`
         : '켜면 고객이 신청하자마자 관심고객에 자동으로 들어와요. (동기화가 켜져 있어야 하고, Firebase 보안 규칙을 한 번 바꿔야 해요) 꺼져 있으면 고객 휴대폰 문자로 받아요.'}</p>
       <div class="row" style="gap:8px">${auto ? '<button class="btn sec grow" onclick="inboxCheck(true)">🔄 지금 확인</button>' : '<button class="btn sec grow" onclick="copyRules()">📋 Firebase 규칙 복사</button><button class="btn hms-btn grow" onclick="inboxEnable()">📨 자동 접수 켜기</button>'}</div></div>
+    <div class="card" style="${db.settings.ntfyOn ? 'background:#eef7f2;border-color:#b6cfc4' : ''}">
+      <b>🔔 휴대폰 알림 ${db.settings.ntfyOn ? '켜짐 ✅' : '꺼짐'}</b>
+      <p class="muted" style="margin:4px 0 8px;font-size:13px">신청이 들어오는 순간 휴대폰에 '새 상담 신청' 알림이 와요(앱이 꺼져 있어도). 고객 이름·번호는 알림에 넣지 않아요.</p>
+      <button class="btn ${db.settings.ntfyOn ? 'sec' : 'hms-btn'}" style="width:100%" onclick="ntfyOpen()">${db.settings.ntfyOn ? '알림 설정 보기 · 시험 알림' : '🔔 휴대폰 알림 켜기'}</button></div>
     <p class="muted" style="margin-top:10px">고객이 링크(또는 QR)를 열어 신청해요. ${auto ? '자동 접수가 안 될 때는 고객 휴대폰 문자로 <b>내 번호</b>에 와요(예비).' : '고객 휴대폰 문자로 <b>내 번호</b>에 신청 내용이 와요.'}</p>
     <div class="formgrid">
       <div><label>신청을 받을 내 휴대폰 번호</label><input id="apPh" type="tel" inputmode="tel" value="${esc(ph)}" placeholder="010-0000-0000" oninput="phoneInput(this)"></div>
@@ -3253,7 +3257,7 @@ async function applyMake() {
   const digits = $('apPh').value.replace(/\D/g, '');
   if (!/^01\d{8,9}$/.test(digits)) return toast('휴대폰 번호를 정확히 적어 주세요.');
   db.settings.applyPhone = phoneVal(digits); save();
-  const url = new URL(`apply.html?${db.settings.inboxOn && db.settings.inboxUid ? 'u=' + db.settings.inboxUid + '&' : ''}to=${digits}&ch=${encodeURIComponent($('apCh').value)}`, location.href.split('#')[0].replace(/[?].*$/, '')).href;
+  const url = new URL(`apply.html?${db.settings.inboxOn && db.settings.inboxUid ? 'u=' + db.settings.inboxUid + '&' : ''}to=${digits}&ch=${encodeURIComponent($('apCh').value)}${db.settings.ntfyOn && db.settings.ntfyTopic ? '&nt=' + db.settings.ntfyTopic : ''}`, location.href.split('#')[0].replace(/[?].*$/, '')).href;
   let img = '';
   try { const q = (await loadQr())(0, 'M'); q.addData(url); q.make(); img = q.createDataURL(6, 3); } catch (e) {}
   $('apOut').innerHTML = `<div class="card" style="text-align:center">
@@ -3538,7 +3542,8 @@ function applyUrlFor(ch) {
   const digits = String(db.settings.applyPhone || (db.settings.card || {}).phone || '').replace(/\D/g, '');
   const u = db.settings.inboxOn && db.settings.inboxUid ? db.settings.inboxUid : '';
   if (!/^01\d{8,9}$/.test(digits) && !u) return '';
-  return new URL(`apply.html?${u ? 'u=' + u + '&' : ''}${/^01\d{8,9}$/.test(digits) ? 'to=' + digits + '&' : ''}ch=${encodeURIComponent(ch)}`, location.href.split('#')[0].replace(/[?].*$/, '')).href;
+  const nt = db.settings.ntfyOn && db.settings.ntfyTopic ? '&nt=' + db.settings.ntfyTopic : '';
+  return new URL(`apply.html?${u ? 'u=' + u + '&' : ''}${/^01\d{8,9}$/.test(digits) ? 'to=' + digits + '&' : ''}ch=${encodeURIComponent(ch)}${nt}`, location.href.split('#')[0].replace(/[?].*$/, '')).href;
 }
 const CONTENT_NOTE = '※ 보험 가입 전 상품설명서와 약관을 꼭 확인하세요. 보장 내용은 상품·가입 조건에 따라 달라요.';
 const tags = (...a) => [...new Set(a.map(x => '#' + String(x).replace(/[·\s()]/g, '')))].join(' ');
@@ -3721,6 +3726,26 @@ const FIRESTORE_RULES = "rules_version = '2';\nservice cloud.firestore {\n  matc
 function copyRules() {
   copyText(FIRESTORE_RULES);
   alert('규칙 글을 복사했어요.\n\nFirebase → Firestore → [규칙] 탭의 큰 글 칸을\n모두 지우고 붙여넣은 뒤 [게시]를 누르세요.\n\n※ [데이터] 탭의 \'필드 추가\'가 아니에요.');
+}
+// 🔔 휴대폰 알림 (ntfy, 무료): 알림 이름(토픽)을 무작위로 만들고, ntfy 앱에서 그 이름을 구독하면 신청이 들어올 때 알림이 옴
+function ntfyOpen() {
+  if (!db.settings.ntfyTopic) { db.settings.ntfyTopic = 'hmsfc-' + Array.from(crypto.getRandomValues(new Uint8Array(12)), b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join(''); save(); }
+  const t = db.settings.ntfyTopic;
+  openSheet('🔔 휴대폰 알림 설정', `<p class="muted" style="margin-top:0">무료 알림 앱 <b>ntfy</b>를 쓰면, 고객이 상담을 신청하는 순간 휴대폰에 알림이 와요. 알림에는 <b>"새 상담 신청이 들어왔어요"</b>만 나오고 고객 이름·번호는 보내지 않아요.</p>
+    <ol style="padding-left:18px;line-height:1.8;font-size:14px;margin:0 0 10px">
+      <li>휴대폰 <b>Play 스토어</b>에서 <b>ntfy</b>를 검색해 설치 (<a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noopener">바로 가기 ↗</a>)</li>
+      <li>ntfy 앱을 열고 오른쪽 아래 <b>[+]</b> → <b>Topic name</b> 칸에 아래 알림 이름을 붙여넣기 → <b>[Subscribe]</b></li>
+      <li>아래 <b>[알림 켜기]</b> → <b>[시험 알림 보내기]</b>로 알림이 오는지 확인</li>
+      <li>명함 [✏️] → [💾 저장하고 명함 링크 만들기], 상담 신청 페이지 [링크·QR 만들기]를 <b>한 번씩 다시</b> 눌러 주세요 (새 링크부터 알림이 와요)</li></ol>
+    <div class="card" style="text-align:center"><div class="muted" style="font-size:12px">알림 이름 (Topic name)</div><b style="font-size:18px;word-break:break-all">${esc(t)}</b>
+      <button class="btn sec" style="width:100%;margin-top:8px" onclick="copyText('${esc(t)}')">📋 알림 이름 복사</button></div>
+    <div class="row" style="gap:8px">${db.settings.ntfyOn ? '<button class="btn sec grow" onclick="db.settings.ntfyOn=false;save();ntfyOpen();toast(\'알림을 껐어요.\')">알림 끄기</button>' : '<button class="btn hms-btn grow" onclick="db.settings.ntfyOn=true;save();if(db.settings.card)cardPublish();ntfyOpen();toast(\'🔔 알림을 켰어요.\')">🔔 알림 켜기</button>'}
+      <button class="btn sec grow" onclick="ntfyTest()">시험 알림 보내기</button></div>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">알림 이름은 명함·신청 링크 안에 들어가요. 누군가 알게 되면 장난 알림이 올 수는 있지만, 고객 정보를 볼 수는 없어요.</p>`);
+}
+function ntfyTest() {
+  fetch('https://ntfy.sh/' + db.settings.ntfyTopic, {method: 'POST', headers: {'Tags': 'bell'}, body: '🔔 시험 알림이에요. 상담 신청이 들어오면 이렇게 알려 드려요.'})
+    .then(r => toast(r.ok ? '시험 알림을 보냈어요. 휴대폰을 확인해 보세요.' : '알림을 보내지 못했어요 (' + r.status + ')')).catch(() => toast('알림을 보내지 못했어요. 인터넷 연결을 확인해 주세요.'));
 }
 async function cardShare(url) {
   const c = db.settings.card || {};
