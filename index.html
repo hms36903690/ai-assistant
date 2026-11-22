@@ -561,7 +561,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.23-233';
+const APP_VERSION = '2026.11.23-234';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -3637,7 +3637,7 @@ async function cardPublish() {
   if (SYNC.on && SYNC.user) {
     try {
       await firebase.firestore().collection('hmsfc_pub').doc(SYNC.user.uid).set({card: JSON.stringify(c), cardAt: Date.now()}, {merge: true});
-      url = new URL('card.html?u=' + SYNC.user.uid, base).href;
+      url = cardHashUrl(c, base).replace('card.html#', 'card.html?u=' + SYNC.user.uid + '#'); // 사진은 Firebase에서, 못 읽으면 링크 안 내용으로
     } catch (e) { note = '⚠️ 명함을 올리지 못했어요 (Firebase 규칙 확인). 사진 없는 링크로 만들었어요.'; }
   } else note = '동기화가 꺼져 있어서 사진 없는 링크로 만들었어요. (동기화를 켜면 사진이 들어간 짧은 링크가 돼요)';
   if (!url) url = cardHashUrl(c, base);

@@ -51,16 +51,24 @@
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '';
+// 명함 불러오기: ① ?u= 가 있으면 Firebase 공개 칸(사진 포함)에서 ② 안 되면 링크 안에 담긴 #d= 내용(사진 제외)으로 — 둘 중 하나라도 되면 열림
+let loadErr = '';
+const fromHash = () => {
+  const h = new URLSearchParams(location.hash.slice(1)).get('d');
+  if (!h) return null;
+  try { return JSON.parse(decodeURIComponent(escape(atob(h.replace(/-/g, '+').replace(/_/g, '/'))))); } catch (e) { loadErr += ' 링크 내용 오류'; return null; }
+};
 async function load() {
   const P = new URLSearchParams(location.search), U = (P.get('u') || '').replace(/[^A-Za-z0-9]/g, '');
-  const h = new URLSearchParams(location.hash.slice(1)).get('d');
-  if (h) { try { return JSON.parse(decodeURIComponent(escape(atob(h.replace(/-/g, '+').replace(/_/g, '/'))))); } catch (e) {} }
-  if (!U) return null;
-  const cfg = await (await fetch('sync-config.json', {cache: 'no-cache'})).json();
-  const r = await fetch(`https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/hmsfc_pub/${U}?key=${cfg.apiKey}`);
-  if (!r.ok) return null;
-  const f = (await r.json()).fields || {}, c = f.card && f.card.stringValue;
-  return c ? JSON.parse(c) : null;
+  if (U) {
+    try {
+      const cfg = await (await fetch('sync-config.json', {cache: 'no-cache'})).json();
+      const r = await fetch(`https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/hmsfc_pub/${U}?key=${cfg.apiKey}`);
+      if (r.ok) { const f = (await r.json()).fields || {}, c = f.card && f.card.stringValue; if (c) return JSON.parse(c); loadErr = '명함 내용 없음'; }
+      else loadErr = '서버 ' + r.status;
+    } catch (e) { loadErr = '연결 ' + (e.message || e); }
+  }
+  return fromHash();
 }
 function render(c) {
   document.title = `${c.name || '디지털 명함'} · ${c.org || 'HMS PREMIUM'}`;
@@ -123,8 +131,8 @@ function kakaoShare(c) {
     sc.onload = go; sc.onerror = no; document.head.appendChild(sc);
   });
 }
-load().then(c => c ? render(c) : $('app').innerHTML = '<div class="err">명함을 찾지 못했어요.<br>받으신 링크를 다시 눌러 주세요.</div>')
-  .catch(() => $('app').innerHTML = '<div class="err">명함을 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</div>');
+load().then(c => c ? render(c) : $('app').innerHTML = `<div class="err">명함을 찾지 못했어요.<br>받으신 링크를 다시 눌러 주세요.${loadErr ? `<br><small style="color:#9aa5b1">(${esc(loadErr)})</small>` : ''}</div>`)
+  .catch(e => $('app').innerHTML = `<div class="err">명함을 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.<br><small style="color:#9aa5b1">(${esc(e.message || e)})</small></div>`);
 </script>
 </body>
 </html>
