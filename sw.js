@@ -1,6 +1,6 @@
 // 앱 화면 파일을 기기에 저장해 두어 인터넷이 없어도 열리게 합니다.
 // 새 버전을 올릴 때는 아래 버전 숫자를 올려 주세요. (예: v2 → v3)
-const CACHE = 'hmsfc-v251';
+const CACHE = 'hmsfc-v252';
 const FILES = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
@@ -47,4 +47,14 @@ self.addEventListener('fetch', e => {
     return;
   }
   e.respondWith(caches.match(req).then(r => r || fetch(req)));
+});
+
+// 🔔 '새 상담 신청' 알림을 누르면 영업비서 앱의 CEO 화면을 엶 (이미 열려 있으면 그 창으로)
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = new URL('./index.html#ceo', self.registration.scope).href;
+  e.waitUntil(clients.matchAll({type: 'window', includeUncontrolled: true}).then(list => {
+    for (const c of list) { if (c.url.startsWith(self.registration.scope)) { c.navigate ? c.navigate(url).catch(() => {}) : null; return c.focus(); } }
+    return clients.openWindow(url);
+  }));
 });
