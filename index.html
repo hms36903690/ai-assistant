@@ -560,7 +560,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.23-256';
+const APP_VERSION = '2026.11.23-257';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -2755,6 +2755,8 @@ const CEO_FIELDS = [
   {k: 'issues', label: '관심 이슈', type: 'checks', options: CEO_ISSUES, full: true},
   {k: 'memo', label: '메모', type: 'textarea', full: true},
 ];
+// 🕒 상담 신청 시각 (메모의 '🕒 신청 시각: 2026-11-23 오후 3:07' 줄에서 꺼냄) → 목록 칸 맨 위와 자세히 보기 맨 위에 표시
+const applyWhen = c => { const m = String(c.memo || '').match(/🕒 (신청|접수) 시각: (\d{4})-(\d{2})-(\d{2}) (오전|오후) (\d{1,2}:\d{2})/); return m ? {kind: m[1], full: `${m[2]}-${m[3]}-${m[4]} ${m[5]} ${m[6]}`, short: `${+m[3]}/${+m[4]} ${m[5]} ${m[6]}`} : null; };
 function renderCeos() {
   const q = $('ceoSearch').value.trim().toLowerCase();
   setStarFilterBtn('ceoStarBtn', starOnly.ceo);
@@ -2764,7 +2766,7 @@ function renderCeos() {
   $('ceoList').innerHTML = list.length ? list.map(c => `
     <li class="item" onclick="showCeo('${c.id}')">
       <div class="avatar">🏢</div>
-      <div class="body"><div class="name">${esc(c.company)} <span class="muted">${esc(c.boss || '')}</span></div>
+      <div class="body">${(w => w ? `<div style="font-size:12.5px;font-weight:700;color:#1e7b34;margin-bottom:2px;white-space:nowrap">🕒 ${esc(w.short)} ${w.kind}</div>` : '')(applyWhen(c))}<div class="name">${esc(c.company)} <span class="muted">${esc(c.boss || '')}</span></div>
       <div class="meta">${esc([(c.issues || []).join(', '), c.next && '미팅 ' + c.next].filter(Boolean).join(' · '))}</div></div>${c.isNew ? '<span class="tag" style="background:#e8f6ec;color:#1e7b34">NEW</span>' : ''}${c.cstatus && c.cstatus !== '미연락' ? dbTag(c.cstatus) : ''}${prosBtn('ceo', c)}${starBtn('ceo', c)}</li>`).join('')
     : `<li class="empty">${!db.ceos.length ? '법인(CEO) 고객을 등록해 보세요.' : starOnly.ceo ? '⭐ 중요고객이 없습니다.' : '검색 결과가 없습니다.'}</li>`;
 }
@@ -2785,7 +2787,8 @@ function saveCeo(id) {
 function showCeo(id) {
   const c = db.ceos.find(x => x.id === id); if (!c) return;
   if (c.isNew) { c.isNew = false; save(); }
-  const info = [['대표자', c.boss], ['연락처', c.phone], ['연락 상태', c.cstatus && c.cstatus !== '미연락' && c.cstatus], ['업종', c.industry], ['직원 수', c.staff && c.staff + '명'],
+  const aw = applyWhen(c);
+  const info = [[aw ? '🕒 ' + aw.kind + ' 시각' : '', aw && aw.full], ['대표자', c.boss], ['연락처', c.phone], ['연락 상태', c.cstatus && c.cstatus !== '미연락' && c.cstatus], ['업종', c.industry], ['직원 수', c.staff && c.staff + '명'],
     ['관심 이슈', (c.issues || []).join(', ')], ['다음 미팅', c.next && `${c.next} ${c.nextTodo || ''}`], ['메모', c.memo]];
   openSheet(c.company, `
     ${contactRow(c.phone)}${callBtns('ceo', c)}${starToggleBtn('ceo', c)}${infoCard(info)}${templateCard('ceo', c)}
