@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
+<title>Firebase 규칙 복사</title>
+<style>body{font-family:system-ui,"Noto Sans KR",sans-serif;max-width:760px;margin:0 auto;padding:20px;background:#f6f5f0;color:#1f2933}
+h1{font-size:22px}button{font-size:20px;font-weight:800;padding:16px 28px;border-radius:999px;border:0;background:#0d3b2e;color:#f3ead2;cursor:pointer}
+textarea{width:100%;height:360px;font:13px/1.5 monospace;margin-top:14px;padding:10px;border:1px solid #ccc;border-radius:10px;box-sizing:border-box}
+ol{line-height:1.8}#ok{color:#1e7b34;font-weight:800;margin-left:10px}</style></head>
+<body><h1>Firebase 규칙 복사</h1>
+<button id="b">📋 규칙 복사하기</button><span id="ok"></span>
+<ol><li>위 버튼을 누르면 복사돼요.</li><li>Firebase → Firestore → <b>[규칙]</b> 화면의 큰 칸을 누르고 <b>Ctrl+A</b> → <b>Delete</b></li><li><b>Ctrl+V</b>로 붙여넣고 파란 <b>[게시]</b></li></ol>
+<textarea id="t" readonly>rules_version = &#x27;2&#x27;;
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 로그인한 본인만 자기 데이터(암호화된 상태)를 읽고 쓸 수 있습니다.
+    match /hmsfc/{uid} {
+      allow read, write: if request.auth != null &amp;&amp; request.auth.uid == uid;
+    }
+    // 상담 신청 페이지가 신청 내용을 암호화할 때 쓰는 &#x27;공개키&#x27; (누구나 읽기, 본인만 쓰기)
+    match /hmsfc_pub/{uid} {
+      allow read: if true;
+      allow write: if request.auth != null &amp;&amp; request.auth.uid == uid;
+    }
+    // 상담 신청 받은편지함: 고객은 &#x27;암호화된 신청서 넣기&#x27;만 가능, 읽기·지우기는 FC 본인만
+    match /hmsfc_in/{uid}/leads/{id} {
+      allow create: if request.resource.data.keys().hasOnly([&#x27;ek&#x27;, &#x27;iv&#x27;, &#x27;ct&#x27;, &#x27;v&#x27;, &#x27;at&#x27;])
+        &amp;&amp; request.resource.data.ek is string &amp;&amp; request.resource.data.ek.size() &lt; 1000
+        &amp;&amp; request.resource.data.iv is string &amp;&amp; request.resource.data.iv.size() &lt; 40
+        &amp;&amp; request.resource.data.ct is string &amp;&amp; request.resource.data.ct.size() &lt; 6000
+        &amp;&amp; request.resource.data.v is int &amp;&amp; request.resource.data.at is int;
+      allow read, delete: if request.auth != null &amp;&amp; request.auth.uid == uid;
+    }
+  }
+}
+</textarea>
+<script>
+document.getElementById('b').onclick = async () => {
+  const t = document.getElementById('t'), ok = document.getElementById('ok');
+  try { await navigator.clipboard.writeText(t.value); } catch (e) { t.select(); document.execCommand('copy'); }
+  ok.textContent = '✅ 복사됐어요! 이제 Firebase 규칙 칸에 붙여넣으세요.';
+};
+</script></body></html>
