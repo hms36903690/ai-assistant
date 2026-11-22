@@ -292,6 +292,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
     <div id="backupNotice"></div>
     <div class="card" id="routineCard"></div>
     <div class="card" id="bdayCard" style="display:none"></div>
+    <div class="card" id="homeCardBox" style="border-top:3px solid #b89b5e"></div>
     <div class="card">
       <div class="row" style="margin-bottom:10px;gap:10px"><h3 style="margin:0;white-space:nowrap">오늘 할 일</h3><input type="date" id="taskDate" aria-label="할 일 날짜" style="width:auto;padding:6px 8px;font-size:14px"></div>
       <div class="row" style="margin-bottom:6px">
@@ -549,7 +550,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.22-220';
+const APP_VERSION = '2026.11.22-221';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -1824,7 +1825,7 @@ function editSlogan() {
 }
 function renderHome() {
   const now = new Date();
-  renderHomeMemo();
+  renderHomeMemo(); renderHomeCard();
   $('helloText').textContent = db.settings.slogan || SLOGAN_DEFAULT;
   renderQuote();
   $('todayText').textContent = now.toLocaleDateString('ko-KR', {year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
@@ -3698,6 +3699,31 @@ async function cardStats() {
     <div class="card"><h3>명함에서 누른 버튼</h3>${evs.map(([k, v]) => `<div class="row" style="justify-content:space-between;padding:5px 0;border-top:1px solid var(--line)"><span>${CARD_EV[k]}</span><b>${v}번</b></div>`).join('')}</div>
     <p class="muted" style="font-size:12px">명함 링크(card.html?u=…)를 연 기록이에요. FC님 본인 휴대폰·태블릿에서 연 것은 세지 않아요. 같은 사람이 여러 번 열면 조회는 여러 번, '본 사람'은 한 명으로 세요(기기 기준이라 정확하지 않을 수 있어요). 이름·번호 같은 개인정보는 남기지 않아요.</p>
     <button class="btn sec" style="width:100%" onclick="cardOpen()">← 명함으로</button>`);
+}
+// 🏠 홈 '오늘 할 일' 위: 내 디지털 명함 (보내기 · 조회수 · 통계)
+let homeCardViews = null, homeCardAt = 0;
+function renderHomeCard() {
+  const box = $('homeCardBox'); if (!box) return;
+  const c = db.settings.card;
+  if (!c) { box.innerHTML = `<div class="row" style="gap:10px;align-items:center"><b class="grow">🪪 디지털 명함</b><button class="btn sec sm" onclick="cardOpen()">명함 만들기 ›</button></div>`; return; }
+  const v = homeCardViews;
+  box.innerHTML = `<div class="row" style="gap:10px;align-items:center">
+      ${c.photo ? `<img src="${c.photo}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #d4b46a;flex:none">` : '<span style="font-size:26px">🪪</span>'}
+      <div class="grow" style="min-width:0"><b>내 디지털 명함</b><div class="muted" style="font-size:13px">${v ? `오늘 조회 <b>${v.today}</b> · 7일 <b>${v.week}</b> · 전체 <b>${v.total}</b>` : SYNC.on ? '조회수 불러오는 중…' : '조회수는 동기화를 켜면 보여요'}</div></div></div>
+    <div class="row" style="gap:8px;margin-top:10px"><button class="btn hms-btn grow" style="padding:10px" onclick="homeCardSend()">💬 명함 보내기</button><button class="btn sec grow" style="padding:10px" onclick="cardStats()">📊 통계</button><button class="btn sec" style="padding:10px" onclick="cardOpen()" aria-label="명함 고치기">✏️</button></div>`;
+  if (SYNC.on && SYNC.user && Date.now() - homeCardAt > 300000) { // 5분에 한 번만 불러오기
+    homeCardAt = Date.now();
+    firebase.firestore().collection('hmsfc_in').doc(SYNC.user.uid).collection('views').get().then(q => {
+      const rows = q.docs.map(d => d.data()).filter(r => r.ev === 'view'), t = today(), wk = (() => { const d = new Date(); d.setDate(d.getDate() - 6); return ymd(d); })(), day = ms => ymd(new Date(ms));
+      homeCardViews = {today: rows.filter(r => day(r.at) === t).length, week: rows.filter(r => day(r.at) >= wk).length, total: rows.length};
+      if ($('page-home').classList.contains('active')) renderHomeCard();
+    }).catch(() => { homeCardViews = null; });
+  }
+}
+function homeCardSend() {
+  const base = location.href.split('#')[0].replace(/[?].*$/, '');
+  if (SYNC.on && SYNC.user) return cardShare(new URL('card.html?u=' + SYNC.user.uid, base).href);
+  cardOpen(); toast('아래 [💬 보내기]로 보내 주세요.');
 }
 async function cardShare(url) {
   const c = db.settings.card || {};
