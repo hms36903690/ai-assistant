@@ -561,7 +561,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.23-228';
+const APP_VERSION = '2026.11.23-229';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -3236,7 +3236,7 @@ function applyLinkOpen() {
       <b>📨 자동 접수 ${auto ? '켜짐 ✅' : '꺼짐'}</b>
       <p class="muted" style="margin:4px 0 8px;font-size:13px">${auto ? `고객이 신청하면 암호화되어 바로 접수되고, 앱을 열면 <b>관심고객</b>에 자동으로 들어와요.${INBOX.last ? ' (마지막 확인 ' + INBOX.last + ')' : ''}${INBOX.err ? '<br>⚠️ ' + esc(INBOX.err) : ''}`
         : '켜면 고객이 신청하자마자 관심고객에 자동으로 들어와요. (동기화가 켜져 있어야 하고, Firebase 보안 규칙을 한 번 바꿔야 해요) 꺼져 있으면 고객 휴대폰 문자로 받아요.'}</p>
-      <div class="row" style="gap:8px">${auto ? '<button class="btn sec grow" onclick="inboxCheck(true)">🔄 지금 확인</button>' : '<button class="btn hms-btn grow" onclick="inboxEnable()">📨 자동 접수 켜기</button>'}</div></div>
+      <div class="row" style="gap:8px">${auto ? '<button class="btn sec grow" onclick="inboxCheck(true)">🔄 지금 확인</button>' : '<button class="btn sec grow" onclick="copyRules()">📋 Firebase 규칙 복사</button><button class="btn hms-btn grow" onclick="inboxEnable()">📨 자동 접수 켜기</button>'}</div></div>
     <p class="muted" style="margin-top:10px">고객이 링크(또는 QR)를 열어 신청해요. ${auto ? '자동 접수가 안 될 때는 고객 휴대폰 문자로 <b>내 번호</b>에 와요(예비).' : '고객 휴대폰 문자로 <b>내 번호</b>에 신청 내용이 와요.'}</p>
     <div class="formgrid">
       <div><label>신청을 받을 내 휴대폰 번호</label><input id="apPh" type="tel" inputmode="tel" value="${esc(ph)}" placeholder="010-0000-0000" oninput="phoneInput(this)"></div>
@@ -3642,7 +3642,7 @@ async function cardLink(publish) {
   db.settings.cardUrl = url; save(); renderHomeCard(); // 보내기·크게 보기는 이 링크를 그대로 씀
   let qr = ''; try { const q = (await loadQr())(0, 'M'); q.addData(url); q.make(); qr = q.createDataURL(5, 2); } catch (e) {}
   if (publish) toast('🪪 명함을 저장했어요.');
-  $('cardOut').innerHTML = `<div class="card" style="text-align:center">${note ? `<div class="notice" style="text-align:left">${note}</div>` : ''}
+  $('cardOut').innerHTML = `<div class="card" style="text-align:center">${note ? `<div class="notice" style="text-align:left">${note}${SYNC.on ? '<br><button class="btn sec sm" style="margin-top:6px" onclick="copyRules()">📋 Firebase 규칙 복사</button>' : ''}</div>` : ''}
     ${qr ? `<img src="${qr}" alt="명함 QR" style="width:170px;height:170px;image-rendering:pixelated"><br>` : ''}
     <div style="word-break:break-all;font-size:12px;margin:6px 0">${esc(url)}</div>
     <div class="row" style="gap:8px"><button class="btn sec grow" onclick="copyText('${esc(url)}')">📋 링크 복사</button><button class="btn sec grow" onclick="cardShare('${esc(url)}')">💬 보내기</button><a class="btn sec grow" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none;text-align:center">👀 미리 보기</a></div>
@@ -3702,6 +3702,12 @@ async function kakaoSendCard(url) {
     content: {title: `${c.name || ''} ${[c.org, c.title].filter(Boolean).join(' · ')}`.trim(), description: tags || c.intro || '디지털 명함을 확인하세요.',
       imageUrl: img, imageWidth: 640, imageHeight: c.photo ? 640 : 336, link: {mobileWebUrl: url, webUrl: url}},
     buttons: [{title: '명함 확인', link: {mobileWebUrl: url, webUrl: url}}]});
+}
+// 📋 Firebase 규칙 글 복사 (콘솔 → Firestore → 규칙 칸에 붙여넣고 [게시]) — 저장소 firestore.rules와 같은 내용
+const FIRESTORE_RULES = "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    // 로그인한 본인만 자기 데이터(암호화된 상태)를 읽고 쓸 수 있습니다.\n    match /hmsfc/{uid} {\n      allow read, write: if request.auth != null && request.auth.uid == uid;\n    }\n    // 상담 신청 페이지가 신청 내용을 암호화할 때 쓰는 '공개키' (누구나 읽기, 본인만 쓰기)\n    match /hmsfc_pub/{uid} {\n      allow read: if true;\n      allow write: if request.auth != null && request.auth.uid == uid;\n    }\n    // 상담 신청 받은편지함: 고객은 '암호화된 신청서 넣기'만 가능, 읽기·지우기는 FC 본인만\n    match /hmsfc_in/{uid}/leads/{id} {\n      allow create: if request.resource.data.keys().hasOnly(['ek', 'iv', 'ct', 'v', 'at'])\n        && request.resource.data.ek is string && request.resource.data.ek.size() < 1000\n        && request.resource.data.iv is string && request.resource.data.iv.size() < 40\n        && request.resource.data.ct is string && request.resource.data.ct.size() < 6000\n        && request.resource.data.v is int && request.resource.data.at is int;\n      allow read, delete: if request.auth != null && request.auth.uid == uid;\n    }\n  }\n}\n";
+function copyRules() {
+  copyText(FIRESTORE_RULES);
+  alert('규칙 글을 복사했어요.\n\nFirebase → Firestore → [규칙] 탭의 큰 글 칸을\n모두 지우고 붙여넣은 뒤 [게시]를 누르세요.\n\n※ [데이터] 탭의 \'필드 추가\'가 아니에요.');
 }
 async function cardShare(url) {
   const c = db.settings.card || {};
@@ -4116,7 +4122,8 @@ function syncCardHtml() {
     <button class="btn" style="margin-top:8px" onclick="saveFbCfg()">연결 설정 저장</button>`;
   if (SYNC.on) return head + err + `<p style="margin:0 0 8px">✅ <b>동기화 켜짐</b><br><span class="muted">${esc(SYNC.user ? SYNC.user.email : '')}${SYNC.last ? ' · 마지막 동기화 ' + SYNC.last : ''}</span></p>
     <p class="muted" style="margin-top:0">이 기기에서 고친 내용이 다른 기기에도 자동으로 반영됩니다.</p>
-    <div class="row"><button class="btn sec grow" onclick="syncNowBtn()">지금 동기화</button><button class="btn danger" onclick="syncOff()">이 기기 동기화 끄기</button></div>`;
+    <div class="row"><button class="btn sec grow" onclick="syncNowBtn()">지금 동기화</button><button class="btn danger" onclick="syncOff()">이 기기 동기화 끄기</button></div>
+    <button class="btn sec" style="width:100%;margin-top:8px" onclick="copyRules()">📋 Firebase 규칙 복사 (명함 사진·상담 자동 접수용)</button>`;
   if (!SYNC.user) return head + err + `<p class="muted" style="margin-top:0">핸드폰과 태블릿에서 <b>같은 구글 계정</b>으로 로그인하면 고객 정보가 자동으로 맞춰집니다.</p>
     <button class="btn" onclick="syncLogin()">구글 계정으로 로그인</button>
     ${isStandalone() ? `<div class="notice" style="margin-top:10px;background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a">
