@@ -561,7 +561,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.23-229';
+const APP_VERSION = '2026.11.23-230';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -4033,6 +4033,8 @@ async function initFirebase() {
   firebase.initializeApp(cfg);
   return true;
 }
+// 서버 동기화 문서가 제대로 있는지 (암호 칸 iv·ct가 있어야 함)
+const remoteOk = snap => !!(snap && snap.exists && snap.data() && snap.data().ct && snap.data().iv);
 const docRef = () => firebase.firestore().collection('hmsfc').doc(SYNC.user.uid);
 function setSyncState(err) {
   SYNC.err = err || '';
@@ -4059,7 +4061,7 @@ async function pushNow() {
     const ref = docRef(), salt = JSON.parse(lsGet(LS.key)).salt;
     const merged = await firebase.firestore().runTransaction(async tx => {
       const snap = await tx.get(ref);
-      const m = snap.exists ? mergeDb(db, await decryptDb(snap.data())) : clone(db);
+      const m = remoteOk(snap) ? mergeDb(db, await decryptDb(snap.data())) : clone(db); // 비어 있으면 이 기기 데이터로 다시 채움
       tx.set(ref, {...(await encryptDb(m)), salt, v: 1, device: DEVICE, updatedAt: Date.now()});
       return m;
     });
@@ -4077,7 +4079,7 @@ function startListening() {
   if (SYNC.unsub) SYNC.unsub();
   SYNC.unsub = docRef().onSnapshot(snap => {
     if (!snap.exists || snap.metadata.hasPendingWrites) return;
-    const d = snap.data(); if (d.device === DEVICE) return;
+    const d = snap.data(); if (d.device === DEVICE || !d.ct || !d.iv) return;
     applyRemote(d).catch(e => setSyncState('동기화 실패: ' + (e.message || e)));
   }, e => setSyncState('동기화 연결 끊김: ' + (e.message || e)));
 }
@@ -4089,7 +4091,7 @@ async function startSync() {
   SYNC.on = true; setSyncState();
   try {
     const snap = await docRef().get();
-    if (snap.exists) await applyRemote(snap.data()); else await pushNow();
+    if (remoteOk(snap)) await applyRemote(snap.data()); else await pushNow(); // 서버가 비어 있으면 이 기기 데이터를 올림
     startListening(); setTimeout(inboxCheck, 1000);
   } catch (e) { setSyncState('동기화 실패: ' + (e.message || e)); }
   return true;
@@ -4109,7 +4111,7 @@ async function bootSync() {
     });
   } catch (e) { setSyncState('동기화를 시작하지 못했어요: ' + e.message); }
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && SYNC.on) docRef().get().then(s => s.exists && applyRemote(s.data())).catch(() => {});
+    if (!document.hidden && SYNC.on) docRef().get().then(s => remoteOk(s) && applyRemote(s.data())).catch(() => {});
   });
 }
 // ── 설정 화면의 동기화 칸
