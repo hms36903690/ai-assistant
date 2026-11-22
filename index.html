@@ -550,7 +550,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.22-223';
+const APP_VERSION = '2026.11.22-224';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -691,7 +691,7 @@ function formHtml(fields, data) {
     else if (f.unit) input = `<div style="position:relative">${f.pre ? `<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--sub)">${esc(f.pre)}</span>` : ''}<input id="f_${f.k}" type="${f.type || 'text'}" value="${v}" placeholder="${esc(f.ph || '')}"${f.type === 'number' ? ' inputmode="numeric"' : ''} style="padding-right:34px${f.pre ? ';padding-left:46px' : ''}"><span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--sub)">${esc(f.unit)}</span></div>`;
     else if (f.type === 'tel') input = `<input id="f_${f.k}" type="tel" inputmode="tel" value="${v}" placeholder="${esc(f.ph || '')}" oninput="phoneInput(this)" onkeyup="phoneInput(this)" oncompositionend="phoneInput(this)" onblur="phoneInput(this)">`;
     else input = `<input id="f_${f.k}" type="${f.type || 'text'}" value="${v}" placeholder="${esc(f.ph || '')}"${f.type === 'number' ? ' inputmode="numeric"' : ''}>`;
-    const lbl = f.type === 'tel' ? `<label style="display:flex;align-items:center;justify-content:space-between;gap:6px">${esc(f.label)}<span style="display:flex;gap:4px"><button type="button" class="btn sec sm" style="padding:3px 8px;font-size:12px" onclick="pasteContactOne()">📋 붙여넣기</button></span></label>` : `<label>${esc(f.label)}</label>`;
+    const lbl = `<label>${esc(f.label)}</label>`; // (연락처 칸 옆 📋 붙여넣기 버튼은 사용자 요청으로 지움)
     return `<div class="${f.full ? 'full' : ''}">${lbl}${input}</div>`;
   }).join('') + '</div>';
 }
@@ -793,52 +793,6 @@ function shareInto(coll) {
   toast(`${name} ${added}명을 저장했어요.${skipped ? ` (이미 있는 ${skipped}명은 건너뜀)` : ''}`);
 }
 window.addEventListener('load', () => setTimeout(receiveShared, 300));
-// 📋: 등록 창 맨 위에 붙여넣기 칸을 열어, 무엇이 들어왔는지 보고 [넣기] (예전 복사 내용이 들어와도 바로 보이고 바꿀 수 있게)
-async function pasteContactOne() {
-  let box = $('pasteBox');
-  if (!box) {
-    box = document.createElement('div'); box.id = 'pasteBox'; box.className = 'card';
-    box.style.cssText = 'margin:0 0 12px;padding:12px;background:#fff8e6;border:1px solid #f0d58a';
-    box.innerHTML = `<b>📋 연락처 붙여넣기</b>
-      <p class="muted" style="font-size:12px;margin:4px 0 6px">휴대폰 연락처에서 사람을 열고 <b>공유 → 텍스트</b>로 복사하거나, 이름·번호를 길게 눌러 복사한 뒤 아래 칸을 <b>길게 눌러 [붙여넣기]</b> 하세요.</p>
-      <textarea id="pasteTxt" style="min-height:70px" placeholder="여기를 길게 눌러 붙여넣기" oninput="pastePreview()"></textarea>
-      <div id="pastePrev" style="font-size:14px;margin:6px 0"></div>
-      <div class="row"><button type="button" class="btn grow" onclick="pasteApply()">넣기</button><button type="button" class="btn sec" onclick="$('pasteTxt').value='';pastePreview();$('pasteTxt').focus()">지우기</button><button type="button" class="btn sec" onclick="$('pasteBox').remove()">닫기</button></div>`;
-    $('sheetBody').prepend(box);
-  }
-  let t = ''; try { t = await navigator.clipboard.readText(); } catch (e) {}
-  $('pasteTxt').value = t || ''; pastePreview();
-  $('sheetBody').scrollTop = 0; $('pasteTxt').focus(); $('pasteTxt').select();
-}
-function pastePreview() {
-  const [one] = parseContactsText($('pasteTxt').value);
-  $('pastePrev').innerHTML = one ? `찾은 내용 👉 이름 <b>${esc(one.nm || '(없음)')}</b> · 번호 <b>${esc(one.tel || '(없음)')}</b>` : '<span class="muted">아직 찾은 이름·번호가 없어요.</span>';
-}
-function pasteApply() {
-  const [one] = parseContactsText($('pasteTxt').value);
-  if (!one) return toast('이름이나 전화번호를 찾지 못했어요.');
-  $('pasteBox').remove();
-  fillContactOne(one.nm, one.tel);
-}
-function fillContactOne(nm, tel) {
-  if (!nm && !tel) return toast('받아온 이름·번호가 비어 있어요.');
-  // 관심고객 '새로 등록' 창이면: 이름·연락처를 바로 저장하고, 같은 창에서 나머지를 이어서 적게
-  const isDbForm = $('f_interest') && $('f_received') && document.querySelector('#sheetBody button[onclick^="saveDb("]');
-  const newDbForm = isDbForm && document.querySelector(`#sheetBody button[onclick="saveDb('')"]`);
-  // 이미 저장된 사람 창에서 또 고르면 그 사람을 덮어쓰지 않고 새 관심고객으로
-  const otherPerson = isDbForm && !newDbForm && $('f_name').value.trim() && $('f_name').value.trim() !== nm;
-  if ((newDbForm || otherPerson) && dbDupOpen(tel)) return;
-  if (newDbForm || otherPerson) {
-    const v = newDbForm ? readForm(DB_FIELDS) : {received: today(), source: '', status: '미연락'}, id = uid();
-    db.dbleads.push({id, created: today(), calls: 0, logs: [], ...v, name: nm || v.name || tel, phone: tel || v.phone});
-    save(); refresh(); editDb(id);
-    return toast('이름·연락처를 저장했어요. 나머지를 적고 [저장]을 눌러 주세요.');
-  }
-  const nameEl = $('f_name') || $('f_boss');
-  if (nameEl && nm) nameEl.value = nm;
-  if ($('f_phone') && tel) $('f_phone').value = tel;
-  toast('채웠어요. 아래 [저장]을 눌러야 등록돼요.');
-}
 function moneyInput(el) {
   if (/[억만천]/.test(el.value)) return; // 한글 단위로 적는 중이면 그대로 두기
   const d = el.value.replace(/\D/g, '');
