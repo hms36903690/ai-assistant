@@ -19,13 +19,5 @@ service cloud.firestore {
         && request.resource.data.v is int && request.resource.data.at is int;
       allow read, delete: if request.auth != null && request.auth.uid == uid;
     }
-    // 디지털 명함 조회·버튼 누름 기록: 누구나 '시각·종류·방문자 번호'만 넣기, 읽기·지우기는 FC 본인만
-    match /hmsfc_in/{uid}/views/{id} {
-      allow create: if request.resource.data.keys().hasOnly(['at', 'ev', 'vid'])
-        && request.resource.data.at is int
-        && request.resource.data.ev is string && request.resource.data.ev.size() < 20
-        && request.resource.data.vid is string && request.resource.data.vid.size() < 30;
-      allow read, delete: if request.auth != null && request.auth.uid == uid;
-    }
   }
 }

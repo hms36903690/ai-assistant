@@ -44,24 +44,12 @@
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '';
-// 📊 조회·버튼 기록 (u 링크일 때만). FC 본인 기기(영업비서 앱 데이터가 있는 브라우저)에서 연 것은 세지 않음
-const P0 = new URLSearchParams(location.search), U0 = (P0.get('u') || '').replace(/[^A-Za-z0-9]/g, '');
-let CFG = null;
-const isOwner = (() => { try { return !!localStorage.getItem('hmsfc_app_v2'); } catch (e) { return false; } })();
-const vid = (() => { try { let v = localStorage.getItem('hmsCardVid'); if (!v) { v = Math.random().toString(36).slice(2, 12) + Date.now().toString(36); localStorage.setItem('hmsCardVid', v); } return v.slice(0, 28); } catch (e) { return 'x'; } })();
-function track(ev) {
-  if (!U0 || !CFG || isOwner) return;
-  try {
-    fetch(`https://firestore.googleapis.com/v1/projects/${CFG.projectId}/databases/(default)/documents/hmsfc_in/${U0}/views?key=${CFG.apiKey}`, {method: 'POST', keepalive: true, headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({fields: {at: {integerValue: String(Date.now())}, ev: {stringValue: ev}, vid: {stringValue: vid}}})}).catch(() => {});
-  } catch (e) {}
-}
 async function load() {
   const P = new URLSearchParams(location.search), U = (P.get('u') || '').replace(/[^A-Za-z0-9]/g, '');
   const h = new URLSearchParams(location.hash.slice(1)).get('d');
   if (h) { try { return JSON.parse(decodeURIComponent(escape(atob(h.replace(/-/g, '+').replace(/_/g, '/'))))); } catch (e) {} }
   if (!U) return null;
-  const cfg = CFG = await (await fetch('sync-config.json', {cache: 'no-cache'})).json();
+  const cfg = await (await fetch('sync-config.json', {cache: 'no-cache'})).json();
   const r = await fetch(`https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/hmsfc_pub/${U}?key=${cfg.apiKey}`);
   if (!r.ok) return null;
   const f = (await r.json()).fields || {}, c = f.card && f.card.stringValue;
@@ -80,13 +68,13 @@ function render(c) {
     ${badges.length ? `<div class="badges">${badges.map(b => `<span>${esc(b)}</span>`).join('')}</div>` : ''}
   </div>
   <div class="btns">
-    ${tel ? `<a class="b" data-ev="call" href="tel:${tel}"><span>📞</span>전화</a><a class="b" data-ev="sms" href="sms:${tel}"><span>💬</span>문자</a>` : ''}
-    ${kakao ? `<a class="b kakao" data-ev="kakao" href="${esc(kakao)}" target="_blank" rel="noopener"><span>🗨️</span>카카오톡 상담</a>` : ''}
-    ${c.email ? `<a class="b" data-ev="email" href="mailto:${esc(c.email)}"><span>✉️</span>이메일</a>` : ''}
+    ${tel ? `<a class="b" href="tel:${tel}"><span>📞</span>전화</a><a class="b" href="sms:${tel}"><span>💬</span>문자</a>` : ''}
+    ${kakao ? `<a class="b kakao" href="${esc(kakao)}" target="_blank" rel="noopener"><span>🗨️</span>카카오톡 상담</a>` : ''}
+    ${c.email ? `<a class="b" href="mailto:${esc(c.email)}"><span>✉️</span>이메일</a>` : ''}
     <button class="b" id="saveBtn"><span>📇</span>연락처 저장</button>
     <button class="b" id="shareBtn"><span>🔗</span>명함 공유</button>
   </div>
-  ${apply ? `<a class="cta" data-ev="apply" href="${esc(apply)}">📝 무료 상담 신청하기</a>` : ''}
+  ${apply ? `<a class="cta" href="${esc(apply)}">📝 무료 상담 신청하기</a>` : ''}
   ${pts.length ? `<div class="card"><h2>이런 일을 해요</h2><ul>${pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>` : ''}
   <div class="card"><h2>연락처</h2>
     ${c.phone ? `<div class="row"><small>휴대폰</small><a href="tel:${tel}">${esc(c.phone)}</a></div>` : ''}
@@ -96,17 +84,13 @@ function render(c) {
     ${home ? `<div class="row"><small>블로그·홈</small><a href="${esc(home)}" target="_blank" rel="noopener">${esc(home.replace(/^https?:\/\//, ''))}</a></div>` : ''}
   </div>
   <p class="muted">${esc(c.org || '')} ${esc(c.name || '')}${c.reviewNo ? ' · ' + esc(c.reviewNo) : ''}<br>보험 가입 전 상품설명서와 약관을 꼭 읽어 보세요.</p>`;
-  track('view');
-  document.querySelectorAll('[data-ev]').forEach(el => el.addEventListener('click', () => track(el.dataset.ev)));
   $('saveBtn').onclick = () => {
-    track('save');
     const v = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${c.name || ''}`, `N:${c.name || ''};;;;`, c.org && `ORG:${c.org}`, c.title && `TITLE:${c.title}`,
       tel && `TEL;TYPE=CELL:${c.phone}`, c.office && `TEL;TYPE=WORK:${c.office}`, c.email && `EMAIL:${c.email}`, c.address && `ADR;TYPE=WORK:;;${c.address};;;;`,
       `URL:${location.href}`, 'END:VCARD'].filter(Boolean).join('\r\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([v], {type: 'text/vcard'})); a.download = `${c.name || 'contact'}.vcf`; a.click();
   };
   $('shareBtn').onclick = async () => {
-    track('share');
     const data = {title: `${c.name} 명함`, text: `${c.org || ''} ${c.name || ''} 디지털 명함입니다.`, url: location.href};
     try { if (navigator.share) return await navigator.share(data); await navigator.clipboard.writeText(location.href); alert('명함 주소를 복사했어요.'); } catch (e) {}
   };
