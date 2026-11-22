@@ -89,7 +89,8 @@ function render(c) {
     <button class="b" id="saveBtn"><span>📇</span>연락처 저장</button>
     <button class="b${c.kakaoKey ? ' kakao' : ''}" id="shareBtn"><span>${c.kakaoKey ? '💬' : '🔗'}</span>${c.kakaoKey ? '카톡으로 공유' : '명함 공유'}</button>
   </div>
-  ${apply ? `<a class="cta" href="${esc(apply)}">📝 무료 상담 신청하기</a>` : ''}
+  ${apply ? `<a class="cta" href="${esc(apply)}">📝 무료 상담 신청하기</a>
+    <a class="cta" href="${esc(apply + (apply.includes('?') ? '&' : '?') + 't=' + encodeURIComponent('보장분석'))}" style="background:#d4b46a;color:#0d3b2e;margin-top:8px">📋 무료 보장분석 신청하기</a>` : ''}
   ${pts.length || home ? `<div class="card"><h2>${esc(c.name || '')} FC 소개</h2>${pts.length ? `<ul>${pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}
     ${home ? `<a class="b" href="${esc(home)}" target="_blank" rel="noopener" style="flex-direction:row;justify-content:center;gap:6px;margin-top:12px;background:#eef3ef">📝 블로그 보기</a>` : ''}</div>` : ''}
   <div class="card"><h2>연락처</h2>

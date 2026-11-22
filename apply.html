@@ -67,7 +67,7 @@
   </div>
 
   <div class="card" id="form">
-    <h2>무료 상담 신청</h2>
+    <h2 id="formTitle">무료 상담 신청</h2>
     <label for="nm">성함</label>
     <input type="text" id="nm" placeholder="성함을 입력해 주세요" autocomplete="name">
     <label for="ph">연락처</label>
@@ -77,7 +77,7 @@
     <label for="rg">사업 지역</label>
     <select id="rg"><option>제주시</option><option>서귀포시</option><option>애월읍</option><option>한림읍</option><option>조천읍</option><option>구좌읍</option><option>성산읍</option><option>표선면</option><option>남원읍</option><option>대정읍</option><option>안덕면</option><option>제주 외 지역</option></select>
     <label for="topic">상담 희망 분야</label>
-    <select id="topic"><option>기존 보험 점검</option><option>사업장 화재·배상책임</option><option>대표님 건강·소득 보장</option><option>암·실손 보장</option><option>종신·사망 보장</option><option>연금·노후 준비</option><option>자녀·태아 보험</option><option>법인·CEO 컨설팅</option><option>기타</option></select>
+    <select id="topic"><option>기존 보험 점검 (보장분석)</option><option>사업장 화재·배상책임</option><option>대표님 건강·소득 보장</option><option>암·실손 보장</option><option>종신·사망 보장</option><option>연금·노후 준비</option><option>자녀·태아 보험</option><option>법인·CEO 컨설팅</option><option>기타</option></select>
     <label>연락 가능 시간</label>
     <div class="radios"><label><input type="radio" name="tm" value="오전" checked> 오전</label><label><input type="radio" name="tm" value="오후"> 오후</label><label><input type="radio" name="tm" value="저녁"> 저녁</label><label><input type="radio" name="tm" value="아무 때나"> 아무 때나</label></div>
     <label for="q">궁금한 점 (선택)</label>
@@ -112,7 +112,15 @@
 //  · u가 없거나 저장이 안 되면: 고객 휴대폰 문자로 FC 번호(to)에 신청 내용을 보냄 (예비 방법)
 const P = new URLSearchParams(location.search);
 const U = (P.get('u') || '').replace(/[^A-Za-z0-9]/g, ''), to = (P.get('to') || '').replace(/\D/g, ''), ch = (P.get('ch') || '').slice(0, 20);
+// t=보장분석: 명함의 [무료 보장분석 신청] 버튼으로 왔을 때 → 제목과 상담 분야를 보장분석으로
+const T = P.get('t') || '';
 const $ = id => document.getElementById(id);
+if (T === '보장분석') {
+  $('formTitle').textContent = '무료 보장분석 신청';
+  $('topic').value = '기존 보험 점검 (보장분석)';
+  document.querySelector('.cta').textContent = '무료 보장분석 신청하기 ↓';
+  $('q').placeholder = '지금 가입하신 보험(회사·상품 이름 정도)이나 궁금한 점을 편하게 적어 주세요. (주민등록번호·계좌번호·병명 같은 민감한 정보는 적지 마세요)';
+}
 const okTo = /^01\d{8,9}$/.test(to);
 if (!U && !okTo) $('form').innerHTML = '<h2>링크를 다시 확인해 주세요</h2><p>상담 신청 링크가 올바르지 않아요. 받으신 링크를 다시 눌러 주세요.</p>';
 $('howNote').innerHTML = U ? '신청하기를 누르면 바로 접수돼요. 신청 내용은 암호화되어 현미숙 FC에게만 전달돼요.'
@@ -143,7 +151,7 @@ $('send') && ($('send').onclick = async () => {
   $('err').textContent = '';
   const d = new Date(), day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const o = {name: nm, phone: ph, ind: $('ind').value, region: $('rg').value, topic: $('topic').value, time: document.querySelector('input[name=tm]:checked').value,
-    q: $('q').value.trim().slice(0, 300), ch: ch || '상담 신청 페이지', agree: `동의 (${day})`, ad: $('ag2').checked ? `동의 (${day})` : '미동의', day};
+    q: $('q').value.trim().slice(0, 300), ch: (ch || '상담 신청 페이지') + (T === '보장분석' ? '·보장분석' : ''), agree: `동의 (${day})`, ad: $('ag2').checked ? `동의 (${day})` : '미동의', day};
   $('send').disabled = true; $('send').textContent = '접수하고 있어요…';
   if (U) {
     try { await saveOnline(o); $('form').style.display = 'none'; $('doneCard').style.display = ''; $('doneCard').scrollIntoView(); return; }
