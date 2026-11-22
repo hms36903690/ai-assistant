@@ -41,6 +41,19 @@
   .row a{color:var(--g);font-weight:700;text-decoration:none;text-align:right;word-break:break-all}
   .muted{color:var(--sub);font-size:12px;text-align:center;margin-top:16px}
   .err{text-align:center;padding:40px 10px;color:var(--sub)}
+  .quick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .qb{display:flex;align-items:center;justify-content:center;padding:15px 6px;border-radius:14px;font:inherit;font-size:15px;font-weight:800;text-decoration:none;cursor:pointer;border:0;background:#eef3f8;color:#13294b}
+  .qb.dark{background:var(--g);color:#f3ead2}
+  .qb.kakao{background:#fee500;color:#191600}
+  .qb.beige{background:#f4ecdd;color:#6b4f12}
+  .fm label{display:block;font-size:14px;font-weight:700;margin:12px 0 6px}
+  .fm input,.fm select,.fm textarea{width:100%;font:inherit;font-size:16px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);box-sizing:border-box}
+  .fm textarea{min-height:90px;resize:vertical}
+  .fm .chk{display:flex;gap:8px;align-items:flex-start;font-size:14px;font-weight:700;margin-top:14px}
+  .fm .chk input{width:20px;height:20px;flex:none;accent-color:var(--g)}
+  .fm .agree{background:#f8f7f2;border:1px solid #e8e1cc;border-radius:12px;padding:10px 12px;font-size:12px;color:#5c4a1f;margin-top:10px;line-height:1.6}
+  .fm .send{width:100%;margin-top:14px;padding:15px;border-radius:14px;border:0;background:var(--g);color:#f3ead2;font:inherit;font-size:17px;font-weight:900;cursor:pointer}
+  .fm .msg{color:#b42318;font-size:14px;margin-top:8px;min-height:18px}
 </style>
 </head>
 <body>
@@ -82,15 +95,25 @@ function render(c) {
     ${c.intro ? `<p class="intro">${esc(c.intro)}</p>` : ''}
     ${badges.length ? `<div class="badges">${badges.map(b => `<span>${esc(b)}</span>`).join('')}</div>` : ''}
   </div>
-  <div class="btns">
-    ${tel ? `<a class="b" href="tel:${tel}"><span>📞</span>전화</a><a class="b" href="sms:${tel}"><span>💬</span>문자</a>` : ''}
-    ${kakao ? `<a class="b kakao" href="${esc(kakao)}" target="_blank" rel="noopener"><span>🗨️</span>카카오톡 상담</a>` : ''}
-    ${c.email ? `<a class="b" href="mailto:${esc(c.email)}"><span>✉️</span>이메일</a>` : ''}
-    <button class="b" id="saveBtn"><span>📇</span>연락처 저장</button>
-    <button class="b${c.kakaoKey ? ' kakao' : ''}" id="shareBtn"><span>${c.kakaoKey ? '💬' : '🔗'}</span>${c.kakaoKey ? '카톡으로 공유' : '명함 공유'}</button>
+  <div class="card"><h2>빠른 상담 연결</h2>
+    <div class="quick">
+      ${tel ? `<a class="qb dark" href="tel:${tel}">📞 전화 상담</a><a class="qb" href="sms:${tel}">💬 문자 보내기</a>` : ''}
+      ${kakao ? `<a class="qb beige" href="${esc(kakao)}" target="_blank" rel="noopener">🗨️ 카카오톡 상담</a>` : ''}
+      <button class="qb${c.kakaoKey ? ' kakao' : ''}" id="shareBtn">🔗 명함 공유하기</button>
+    </div>
+    <button class="qb" id="saveBtn" style="width:100%;margin-top:10px">📇 내 휴대폰에 연락처 저장</button>
   </div>
-  ${apply ? `<a class="cta" href="${esc(apply)}">📝 무료 상담 신청하기</a>
-    <a class="cta" href="${esc(apply + (apply.includes('?') ? '&' : '?') + 't=' + encodeURIComponent('보장분석'))}" style="background:#d4b46a;color:#0d3b2e;margin-top:8px">📋 무료 보장분석 신청하기</a>` : ''}
+  ${applyInfo(c.apply) ? `<div class="card fm" id="formCard"><h2 id="fmTitle">상담 신청</h2>
+    <label for="fNm">성함</label><input id="fNm" placeholder="성함을 입력해 주세요" autocomplete="name">
+    <label for="fPh">연락처</label><input id="fPh" type="tel" inputmode="tel" placeholder="010-0000-0000" autocomplete="tel">
+    <label for="fTopic">상담 분야</label><select id="fTopic"><option>일반 보험 상담</option><option>기존 보험 점검 (보장분석)</option><option>사업장 화재·배상책임</option><option>대표님 건강·소득 보장</option><option>암·실손 보장</option><option>연금·노후 준비</option><option>법인·CEO 컨설팅</option><option>기타</option></select>
+    <label for="fQ">문의 내용 (선택)</label><textarea id="fQ" placeholder="상담받고 싶은 내용을 간단히 적어 주세요. 주민등록번호·계좌번호·질병 상세정보 등 민감정보는 입력하지 마세요."></textarea>
+    <label class="chk"><input type="checkbox" id="fAg"> <span>상담 연락을 위한 개인정보 수집·이용에 동의합니다.</span></label>
+    <div class="agree">수집 항목: 성함·연락처·상담 분야·문의 내용 / 목적: 상담 신청 확인과 회신 / 보유 기간: 상담 종료 후 1년(또는 동의 철회 시까지) 후 파기 / 동의하지 않으셔도 되지만, 그러면 신청이 접수되지 않아요. 보험증권·진료기록 같은 민감한 자료는 이 양식으로 보내지 마세요.</div>
+    <div class="msg" id="fMsg"></div>
+    <button class="send" id="fSend">상담 신청 보내기</button>
+    <button class="qb beige" id="fBojang" style="width:100%;margin-top:8px">📋 무료 보장분석 신청으로 바꾸기</button>
+  </div>` : ''}
   ${pts.length || home ? `<div class="card"><h2>${esc(c.name || '')} FC 소개</h2>${pts.length ? `<ul>${pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}
     ${home ? `<a class="b" href="${esc(home)}" target="_blank" rel="noopener" style="flex-direction:row;justify-content:center;gap:6px;margin-top:12px;background:#eef3ef">📝 블로그 보기</a>` : ''}</div>` : ''}
   <div class="card"><h2>연락처</h2>
@@ -119,7 +142,7 @@ function render(c) {
     }
     fileSave(); // 아이폰·컴퓨터: 연락처 파일 → 열면 '연락처에 추가'
   };
-  kakaoPreload(c);
+  kakaoPreload(c); setupForm(c);
   const qs = document.createElement('script'); qs.src = 'qrcode.js';
   qs.onload = () => { try { const q = qrcode(0, 'M'); q.addData(/[?&]u=/.test(location.search) ? location.href.split('#')[0] : location.href); q.make(); $('qrBox').innerHTML = `<img src="${q.createDataURL(5, 2)}" alt="명함 QR" style="width:180px;height:180px;image-rendering:pixelated">`; } catch (e) { $('qrBox').closest('.card').remove(); } };
   qs.onerror = () => $('qrBox').closest('.card').remove();
@@ -133,6 +156,48 @@ function render(c) {
 }
 // 카카오 프로그램은 명함이 열릴 때 미리 불러 둠 → 버튼을 누르는 순간 바로 보내야 휴대폰이 막지 않음
 let kakaoOn = false;
+// 명함 안 상담 신청서: 명함의 apply 주소(u=계정, to=FC 번호, ch=유입)를 그대로 써서 상담 신청 페이지와 같은 방식으로 접수
+function applyInfo(a) {
+  try { const u = new URL(a), P = u.searchParams; return {U: (P.get('u') || '').replace(/[^A-Za-z0-9]/g, ''), to: (P.get('to') || '').replace(/\D/g, ''), ch: (P.get('ch') || '디지털 명함').slice(0, 20)}; }
+  catch (e) { return null; }
+}
+const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+async function saveOnline(U, o) {
+  const cfg = await (await fetch('sync-config.json', {cache: 'no-cache'})).json();
+  const base = `https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents`;
+  const pr = await fetch(`${base}/hmsfc_pub/${U}?key=${cfg.apiKey}`); if (!pr.ok) throw new Error('pub ' + pr.status);
+  const pk = (await pr.json()).fields.pk.stringValue;
+  const pub = await crypto.subtle.importKey('spki', Uint8Array.from(atob(pk), ch => ch.charCodeAt(0)), {name: 'RSA-OAEP', hash: 'SHA-256'}, false, ['encrypt']);
+  const aes = await crypto.subtle.generateKey({name: 'AES-GCM', length: 256}, true, ['encrypt']), iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, aes, new TextEncoder().encode(JSON.stringify(o)));
+  const ek = await crypto.subtle.encrypt({name: 'RSA-OAEP'}, pub, await crypto.subtle.exportKey('raw', aes));
+  const r = await fetch(`${base}/hmsfc_in/${U}/leads?key=${cfg.apiKey}`, {method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({fields: {ek: {stringValue: b64(ek)}, iv: {stringValue: b64(iv)}, ct: {stringValue: b64(ct)}, v: {integerValue: '1'}, at: {integerValue: String(Date.now())}}})});
+  if (!r.ok) throw new Error('save ' + r.status);
+}
+function setupForm(c) {
+  const A = applyInfo(c.apply); if (!A || !$('fSend')) return;
+  const fmt = v => { const d = String(v).replace(/\D/g, '').slice(0, 11); return d.length === 11 ? `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}` : d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : d; };
+  $('fBojang').onclick = () => { $('fTopic').value = '기존 보험 점검 (보장분석)'; $('fmTitle').textContent = '무료 보장분석 신청'; $('fQ').placeholder = '지금 가입하신 보험(회사·상품 이름 정도)이나 궁금한 점을 적어 주세요. 주민등록번호·계좌번호·병명 같은 민감정보는 적지 마세요.'; $('fBojang').style.display = 'none'; $('fNm').focus(); };
+  $('fSend').onclick = async () => {
+    const nm = $('fNm').value.trim(), ph = fmt($('fPh').value);
+    if (!nm) return $('fMsg').textContent = '성함을 입력해 주세요.';
+    if (!/^0\d{1,2}-\d{3,4}-\d{4}$/.test(ph)) return $('fMsg').textContent = '연락처를 정확히 입력해 주세요. (예: 010-1234-5678)';
+    if (!$('fAg').checked) return $('fMsg').textContent = '개인정보 수집·이용에 동의해 주셔야 접수돼요.';
+    $('fMsg').textContent = '';
+    const d = new Date(), day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const topic = $('fTopic').value, o = {name: nm, phone: ph, topic, q: $('fQ').value.trim().slice(0, 300), ch: A.ch + (/보장분석/.test(topic) ? '·보장분석' : ''), agree: `동의 (${day})`, ad: '미동의', day};
+    $('fSend').disabled = true; $('fSend').textContent = '접수하고 있어요…';
+    const done = html => { $('formCard').innerHTML = `<div style="text-align:center"><h2>${html}</h2><p style="color:var(--sub)">말씀하신 내용 확인하고 ${esc(c.name || '')} FC가 직접 연락드릴게요. 감사합니다!</p></div>`; };
+    if (A.U) { try { await saveOnline(A.U, o); return done('✅ 상담 신청이 접수됐어요'); } catch (e) {} }
+    if (/^01\d{8,9}$/.test(A.to)) {
+      const body = ['[상담신청]', `성함: ${o.name}`, `연락처: ${o.phone}`, `상담: ${o.topic}`, o.q && `문의: ${o.q.slice(0, 200)}`, `유입: ${o.ch}`, `개인정보 수집·이용 동의: ${o.agree}`, `광고성 정보 수신: ${o.ad}`].filter(Boolean).join('\n');
+      location.href = `sms:${A.to}?&body=${encodeURIComponent(body)}`;
+      return done('📩 문자 앱에서 [보내기]를 눌러 주세요');
+    }
+    $('fSend').disabled = false; $('fSend').textContent = '상담 신청 보내기'; $('fMsg').textContent = '지금 접수가 잘 안 돼요. 위의 전화·문자로 연락 주세요.';
+  };
+}
 function kakaoPreload(c) {
   if (!c.kakaoKey) return;
   const sc = document.createElement('script'); sc.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js'; sc.crossOrigin = 'anonymous';
