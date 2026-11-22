@@ -79,7 +79,7 @@ function render(c) {
     ${kakao ? `<a class="b kakao" href="${esc(kakao)}" target="_blank" rel="noopener"><span>🗨️</span>카카오톡 상담</a>` : ''}
     ${c.email ? `<a class="b" href="mailto:${esc(c.email)}"><span>✉️</span>이메일</a>` : ''}
     <button class="b" id="saveBtn"><span>📇</span>연락처 저장</button>
-    <button class="b" id="shareBtn"><span>🔗</span>명함 공유</button>
+    <button class="b${c.kakaoKey ? ' kakao' : ''}" id="shareBtn"><span>${c.kakaoKey ? '💬' : '🔗'}</span>${c.kakaoKey ? '카톡으로 공유' : '명함 공유'}</button>
   </div>
   ${apply ? `<a class="cta" href="${esc(apply)}">📝 무료 상담 신청하기</a>` : ''}
   ${pts.length ? `<div class="card"><h2>이런 일을 해요</h2><ul>${pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>` : ''}
@@ -98,9 +98,30 @@ function render(c) {
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([v], {type: 'text/vcard'})); a.download = `${c.name || 'contact'}.vcf`; a.click();
   };
   $('shareBtn').onclick = async () => {
+    // 카카오 키가 있으면 카톡 친구 고르는 화면으로 바로 (사진·이름·직함·[명함 확인] 카드)
+    if (c.kakaoKey) { try { return await kakaoShare(c); } catch (e) {} }
     const data = {title: `${c.name} 명함`, text: `${c.org || ''} ${c.name || ''} 디지털 명함입니다.`, url: location.href};
     try { if (navigator.share) return await navigator.share(data); await navigator.clipboard.writeText(location.href); alert('명함 주소를 복사했어요.'); } catch (e) {}
   };
+}
+function kakaoShare(c) {
+  return new Promise((ok, no) => {
+    const go = () => {
+      try {
+        if (!Kakao.isInitialized()) Kakao.init(c.kakaoKey);
+        const tags = String(c.badges || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 3).join(' · ');
+        const url = location.href, img = /^https:\/\//.test(c.kakaoImg || '') ? c.kakaoImg : 'https://hms36903690.github.io/ai-assistant/card-og.png';
+        Kakao.Share.sendDefault({objectType: 'feed',
+          content: {title: `${c.name || ''} ${[c.org, c.title].filter(Boolean).join(' · ')}`.trim(), description: tags || c.intro || '디지털 명함을 확인하세요.',
+            imageUrl: img, imageWidth: 640, imageHeight: c.kakaoImg ? 640 : 336, link: {mobileWebUrl: url, webUrl: url}},
+          buttons: [{title: '명함 확인', link: {mobileWebUrl: url, webUrl: url}}]});
+        ok();
+      } catch (e) { no(e); }
+    };
+    if (window.Kakao) return go();
+    const sc = document.createElement('script'); sc.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js'; sc.crossOrigin = 'anonymous';
+    sc.onload = go; sc.onerror = no; document.head.appendChild(sc);
+  });
 }
 load().then(c => c ? render(c) : $('app').innerHTML = '<div class="err">명함을 찾지 못했어요.<br>받으신 링크를 다시 눌러 주세요.</div>')
   .catch(() => $('app').innerHTML = '<div class="err">명함을 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</div>');

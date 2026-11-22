@@ -561,7 +561,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.23-230';
+const APP_VERSION = '2026.11.23-231';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -3598,7 +3598,7 @@ function cardOpen() {
         <li><a href="https://developers.kakao.com" target="_blank" rel="noopener">developers.kakao.com ↗</a> 카카오 계정으로 로그인 → <b>내 애플리케이션 → 애플리케이션 추가</b> (앱 이름: HMS 명함)</li>
         <li>만든 앱 → <b>플랫폼 → Web 플랫폼 등록</b> → 사이트 도메인에 <b>https://hms36903690.github.io</b> 넣고 저장</li>
         <li><b>앱 키</b>에서 <b>JavaScript 키</b>를 복사해 아래에 붙여넣기 → [저장]</li></ol>
-      <div class="row" style="gap:8px"><input id="kakaoKeyIn" class="grow" value="${esc(db.settings.kakaoKey || '')}" placeholder="JavaScript 키 붙여넣기"><button class="btn sec" onclick="db.settings.kakaoKey=$('kakaoKeyIn').value.replace(/\s/g,'');kakaoReady=null;save();toast(db.settings.kakaoKey?'🟡 카카오 키를 저장했어요.':'카카오 키를 지웠어요.')">저장</button></div>
+      <div class="row" style="gap:8px"><input id="kakaoKeyIn" class="grow" value="${esc(db.settings.kakaoKey || '')}" placeholder="JavaScript 키 붙여넣기"><button class="btn sec" onclick="db.settings.kakaoKey=$('kakaoKeyIn').value.replace(/\s/g,'');kakaoReady=null;save();if(db.settings.card)cardLink(true);toast(db.settings.kakaoKey?'🟡 카카오 키를 저장했어요.':'카카오 키를 지웠어요.')">저장</button></div>
       <p class="muted" style="font-size:12px;margin:8px 0 0">키가 없으면 보통 링크로 보내지고, 카톡에는 'HMS PREMIUM 디지털 명함' 미리보기 그림이 떠요.</p></details>`);
   cardPhoto = c.photo || null;
   if (db.settings.card) cardLink();
@@ -3624,12 +3624,12 @@ async function cardSave() {
 }
 // 내용을 링크 안에 담은 명함 주소 (Firebase 없이 열림, 사진·카카오 사진 주소 제외)
 function cardHashUrl(c, base) {
-  const {photo, kakaoImg, kakaoImgOf, ...rest} = c;
+  const {photo, kakaoImgOf, ...rest} = c;
   return new URL('card.html#d=' + btoa(unescape(encodeURIComponent(JSON.stringify(rest)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''), base).href;
 }
-const cardUrlNow = () => db.settings.cardUrl || cardHashUrl({...db.settings.card, apply: applyUrlFor('디지털 명함')}, location.href.split('#')[0].replace(/[?].*$/, ''));
+const cardUrlNow = () => db.settings.cardUrl || cardHashUrl({...db.settings.card, apply: applyUrlFor('디지털 명함'), kakaoKey: db.settings.kakaoKey || ''}, location.href.split('#')[0].replace(/[?].*$/, ''));
 async function cardLink(publish) {
-  const c = {...db.settings.card, apply: applyUrlFor('디지털 명함')};
+  const c = {...db.settings.card, apply: applyUrlFor('디지털 명함'), kakaoKey: db.settings.kakaoKey || ''}; // 카카오 JS 키는 등록한 주소에서만 쓰이는 공개용 키
   const base = location.href.split('#')[0].replace(/[?].*$/, '');
   let url = '', note = '';
   if (SYNC.on && SYNC.user) {
