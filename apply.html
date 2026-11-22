@@ -134,13 +134,13 @@ $('howNote').innerHTML = U ? '신청하기를 누르면 바로 접수돼요. 신
   : '신청하기를 누르면 휴대폰 문자 앱이 열려요. 내용을 확인하고 <b>[보내기]</b>를 눌러 주시면 접수돼요.';
 const fmt = v => { const d = String(v).replace(/\D/g, '').slice(0, 11); return d.length === 11 ? `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}` : d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : d; };
 const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
-let smsUrl = '';
+let smsUrl = '', PUBNT = ''; // PUBNT: 공개 칸에 올려 둔 FC 알림 이름 (링크에 nt가 없을 때 사용)
 async function saveOnline(o) {
   const cfg = await (await fetch('sync-config.json', {cache: 'no-cache'})).json();
   const base = `https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents`;
   const pr = await fetch(`${base}/hmsfc_pub/${U}?key=${cfg.apiKey}`);
   if (!pr.ok) throw new Error('pub ' + pr.status);
-  const pk = (await pr.json()).fields.pk.stringValue;
+  const F = (await pr.json()).fields, pk = F.pk.stringValue; PUBNT = (F.nt || {}).stringValue || '';
   const pub = await crypto.subtle.importKey('spki', Uint8Array.from(atob(pk), c => c.charCodeAt(0)), {name: 'RSA-OAEP', hash: 'SHA-256'}, false, ['encrypt']);
   const aes = await crypto.subtle.generateKey({name: 'AES-GCM', length: 256}, true, ['encrypt']);
   const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -161,7 +161,7 @@ $('send') && ($('send').onclick = async () => {
     q: $('q').value.trim().slice(0, 300), ch: (ch || '상담 신청 페이지') + (T === '보장분석' ? '·보장분석' : ''), agree: `동의 (${day})`, ad: $('ag2').checked ? `동의 (${day})` : '미동의', day};
   $('send').disabled = true; $('send').textContent = '접수하고 있어요…';
   if (U) {
-    try { await saveOnline(o); notifyFc(NT, o.ch); $('form').style.display = 'none'; $('doneCard').style.display = ''; $('doneCard').scrollIntoView(); return; }
+    try { await saveOnline(o); notifyFc(NT || PUBNT, o.ch); $('form').style.display = 'none'; $('doneCard').style.display = ''; $('doneCard').scrollIntoView(); return; }
     catch (e) { if (!okTo) { $('send').disabled = false; $('send').textContent = '무료 상담 신청하기'; return $('err').textContent = '지금 접수가 잘 안 돼요. 잠시 뒤 다시 눌러 주세요.'; } }
   }
   const body = ['[상담신청]', `성함: ${o.name}`, `연락처: ${o.phone}`, `업종: ${o.ind}`, `지역: ${o.region}`, `상담: ${o.topic}`, `희망시간: ${o.time}`,
