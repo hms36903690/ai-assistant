@@ -103,7 +103,17 @@ function render(c) {
     const v = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${c.name || ''}`, `N:${c.name || ''};;;;`, c.org && `ORG:${c.org}`, c.title && `TITLE:${c.title}`,
       tel && `TEL;TYPE=CELL:${c.phone}`, c.office && `TEL;TYPE=WORK:${c.office}`, c.email && `EMAIL:${c.email}`, c.address && `ADR;TYPE=WORK:;;${c.address};;;;`,
       `URL:${location.href}`, 'END:VCARD'].filter(Boolean).join('\r\n');
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([v], {type: 'text/vcard'})); a.download = `${c.name || 'contact'}.vcf`; a.click();
+    const fileSave = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([v], {type: 'text/vcard'})); a.download = `${c.name || 'contact'}.vcf`; a.click(); };
+    // 안드로이드: 휴대폰 '새 연락처' 화면을 이름·번호가 채워진 채로 바로 엶 (파일 내려받기는 카톡 안 화면 등에서 안 되는 경우가 많음)
+    if (/Android/i.test(navigator.userAgent)) {
+      const x = (k, val) => val ? `S.${k}=${encodeURIComponent(val)};` : '';
+      const memo = [c.title, location.href.split('#')[0]].filter(Boolean).join(' · ');
+      location.href = 'intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.dir/raw_contact;' +
+        x('name', c.name) + x('phone', c.phone) + x('secondary_phone', c.office) + x('email', c.email) + x('company', c.org) + x('job_title', c.title) + x('postal', c.address) + x('notes', memo) + 'end';
+      setTimeout(() => { if (!document.hidden) { fileSave(); alert('연락처 화면이 안 열리면, 내려받은 연락처 파일(.vcf)을 열어 저장해 주세요.\n카톡 안에서 안 되면 오른쪽 위 ⋮ → [다른 브라우저로 열기] 후 다시 눌러 주세요.'); } }, 1800);
+      return;
+    }
+    fileSave(); // 아이폰·컴퓨터: 연락처 파일 → 열면 '연락처에 추가'
   };
   kakaoPreload(c);
   $('shareBtn').onclick = async () => {
