@@ -550,7 +550,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.22-224';
+const APP_VERSION = '2026.11.22-225';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -3580,7 +3580,15 @@ function cardOpen() {
       <input type="file" id="cardPhotoIn" accept="image/*" hidden onchange="cardPhotoPick(this)"></div>
     ${formHtml(BCARD_FIELDS, c)}
     <button class="btn hms-btn" style="width:100%;margin-top:12px;padding:14px" onclick="cardSave()">💾 저장하고 명함 링크 만들기</button>
-    <div id="cardOut" style="margin-top:12px"></div>`);
+    <div id="cardOut" style="margin-top:12px"></div>
+    <details class="card" style="margin-top:12px"${db.settings.kakaoKey ? '' : ' open'}><summary style="cursor:pointer"><b>🟡 카카오톡 명함 카드로 보내기 설정</b> ${db.settings.kakaoKey ? '✅' : '(처음 한 번)'}</summary>
+      <p class="muted" style="font-size:13px">카카오톡으로 보낼 때 <b>사진·이름·직함·태그와 [명함 확인] 버튼</b>이 있는 카드 모양으로 보내려면 카카오 개발자 키(무료)가 필요해요.</p>
+      <ol style="font-size:13px;padding-left:18px;line-height:1.7;margin:0 0 8px">
+        <li><a href="https://developers.kakao.com" target="_blank" rel="noopener">developers.kakao.com ↗</a> 카카오 계정으로 로그인 → <b>내 애플리케이션 → 애플리케이션 추가</b> (앱 이름: HMS 명함)</li>
+        <li>만든 앱 → <b>플랫폼 → Web 플랫폼 등록</b> → 사이트 도메인에 <b>https://hms36903690.github.io</b> 넣고 저장</li>
+        <li><b>앱 키</b>에서 <b>JavaScript 키</b>를 복사해 아래에 붙여넣기 → [저장]</li></ol>
+      <div class="row" style="gap:8px"><input id="kakaoKeyIn" class="grow" value="${esc(db.settings.kakaoKey || '')}" placeholder="JavaScript 키 붙여넣기"><button class="btn sec" onclick="db.settings.kakaoKey=$('kakaoKeyIn').value.trim();kakaoReady=null;save();toast(db.settings.kakaoKey?'🟡 카카오 키를 저장했어요.':'카카오 키를 지웠어요.')">저장</button></div>
+      <p class="muted" style="font-size:12px;margin:8px 0 0">키가 없으면 보통 링크로 보내지고, 카톡에는 'HMS PREMIUM 디지털 명함' 미리보기 그림이 떠요.</p></details>`);
   cardPhoto = c.photo || null;
   if (db.settings.card) cardLink();
 }
@@ -3638,8 +3646,39 @@ function homeCardSend() {
   if (SYNC.on && SYNC.user) return cardShare(new URL('card.html?u=' + SYNC.user.uid, base).href);
   cardOpen(); toast('아래 [💬 보내기]로 보내 주세요.');
 }
+// 🟡 카카오톡 '명함 카드'로 보내기 (카카오 JavaScript SDK · 피드 메시지: 사진·이름·직함·태그 + [명함 확인] 버튼)
+let kakaoReady = null;
+const loadKakao = () => kakaoReady || (kakaoReady = new Promise((ok, no) => {
+  if (window.Kakao && Kakao.isInitialized && Kakao.isInitialized()) return ok(Kakao);
+  const sc = document.createElement('script'); sc.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js'; sc.crossOrigin = 'anonymous';
+  sc.onload = () => { try { if (!Kakao.isInitialized()) Kakao.init(db.settings.kakaoKey); ok(Kakao); } catch (e) { no(e); } };
+  sc.onerror = () => { kakaoReady = null; no(new Error('카카오 프로그램을 불러오지 못했어요 (인터넷 연결 확인)')); };
+  document.head.appendChild(sc);
+}));
+async function kakaoCardImage(K) {
+  const c = db.settings.card || {};
+  if (!c.photo) return 'https://hms36903690.github.io/ai-assistant/card-og.png';
+  if (c.kakaoImg && c.kakaoImgOf === c.photo.length) return c.kakaoImg; // 같은 사진이면 한 번 올린 주소 다시 쓰기
+  const blob = await (await fetch(c.photo)).blob();
+  const res = await K.Share.uploadImage({file: [new File([blob], 'card.jpg', {type: 'image/jpeg'})]});
+  c.kakaoImg = res.infos.original.url; c.kakaoImgOf = c.photo.length; save();
+  return c.kakaoImg;
+}
+async function kakaoSendCard(url) {
+  const c = db.settings.card || {}, K = await loadKakao();
+  const img = await kakaoCardImage(K).catch(() => 'https://hms36903690.github.io/ai-assistant/card-og.png');
+  const tags = String(c.badges || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 3).join(' · ');
+  K.Share.sendDefault({objectType: 'feed',
+    content: {title: `${c.name || ''} ${[c.org, c.title].filter(Boolean).join(' · ')}`.trim(), description: tags || c.intro || '디지털 명함을 확인하세요.',
+      imageUrl: img, imageWidth: 640, imageHeight: c.photo ? 640 : 336, link: {mobileWebUrl: url, webUrl: url}},
+    buttons: [{title: '명함 확인', link: {mobileWebUrl: url, webUrl: url}}]});
+}
 async function cardShare(url) {
   const c = db.settings.card || {};
+  if (db.settings.kakaoKey) {
+    try { return await kakaoSendCard(url); }
+    catch (e) { toast('카톡 카드로 못 보냈어요: ' + (e.message || e) + ' · 보통 링크로 보낼게요.'); }
+  }
   try { if (navigator.share) return await navigator.share({title: `${c.name} 명함`, text: `안녕하세요, ${c.org || ''} ${c.name || ''}입니다. 제 명함 보내 드려요.`, url}); } catch (e) { return; }
   copyText(url); toast('링크를 복사했어요. 카톡·문자에 붙여넣어 보내세요.');
 }
