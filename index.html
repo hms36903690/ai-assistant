@@ -467,6 +467,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
         <button class="hub" onclick="inquiryOpen()"><span class="ic">💬</span><b>문의 고객 접수</b><small>받은 신청 문자 → CEO로 접수</small></button>
         <button class="hub" onclick="funnelOpen()"><span class="ic">📈</span><b>유입 성과 분석</b><small>채널별 문의·상담·계약</small></button>
         <button class="hub" onclick="followOpen()"><span class="ic">🧠</span><b>후속 상담 도우미</b><small>상담 준비와 다음 행동 추천</small></button>
+        <button class="hub" style="grid-column:1/-1;border-color:#d4b46a;background:#fbf7ea" onclick="cardOpen()"><span class="ic">🪪</span><b>디지털 명함</b><small>사진·연락처·카톡 상담·상담 신청 버튼이 있는 명함 링크</small></button>
       </div>
       <h3 style="margin:14px 0 8px">DB 상태</h3>
       <div class="pipe" id="pipe"></div>
@@ -548,7 +549,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.17-218';
+const APP_VERSION = '2026.11.22-219';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -3355,7 +3356,7 @@ async function inboxEnable() {
   if (!SYNC.on || !SYNC.user) return alert('먼저 ⚙️ 설정에서 [핸드폰·태블릿 동기화]를 켜 주세요.\n자동 접수는 동기화 계정(무료 Firebase)으로 받아요.');
   try {
     const k = await inboxKeys();
-    await firebase.firestore().collection('hmsfc_pub').doc(SYNC.user.uid).set({pk: k.pub, fc: db.settings.fcName, at: Date.now()});
+    await firebase.firestore().collection('hmsfc_pub').doc(SYNC.user.uid).set({pk: k.pub, fc: db.settings.fcName, at: Date.now()}, {merge: true}); // 명함 칸은 그대로 두고
     db.settings.inboxOn = true; db.settings.inboxUid = SYNC.user.uid; save();
     if (window.Notification && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
     toast('📨 자동 접수를 켰어요. 새 링크·QR을 만들어 쓰세요.'); applyLinkOpen(); inboxCheck(true);
@@ -3592,6 +3593,86 @@ function contentOpen(i) {
   aiFit('ctOut');
 }
 function aiFit(id) { const t = $(id); if (!t) return; t.style.height = 'auto'; t.style.height = Math.max(200, t.scrollHeight + 4) + 'px'; }
+
+/* ───────── 🪪 디지털 명함 (card.html) ─────────
+   내용은 설정(settings.card)에 저장 → 동기화가 켜져 있으면 Firebase 공개 칸(hmsfc_pub/{uid}.card)에 올려 card.html?u=…로 보여 줌.
+   동기화가 꺼져 있으면 링크 안에 내용을 담음(card.html#d=…, 사진 제외). 저장소에는 개인 정보가 올라가지 않음 */
+const BCARD_FIELDS = [
+  {k: 'name', label: '이름 *'},
+  {k: 'org', label: '소속', ph: '삼성생명'},
+  {k: 'title', label: '직함', ph: '예: FC · 보험 상담 30년'},
+  {k: 'intro', label: '한 줄 소개', full: true, ph: '예: 사장님의 사업과 가족을 30년 경험으로 함께 지키겠습니다'},
+  {k: 'badges', label: '강점 태그 (쉼표로 나눠서)', full: true, ph: '보험 상담 30년, 개인사업자·자영업자, CEO 보장·재무 컨설팅'},
+  {k: 'phone', label: '휴대폰', type: 'tel'},
+  {k: 'office', label: '사무실 전화', type: 'tel'},
+  {k: 'email', label: '이메일'},
+  {k: 'kakao', label: '카카오톡 상담 링크 (오픈채팅·채널 주소)', full: true, ph: 'https://open.kakao.com/…'},
+  {k: 'homepage', label: '블로그·홈페이지', full: true, ph: 'https://blog.naver.com/…'},
+  {k: 'address', label: '사무실 주소', full: true},
+  {k: 'points', label: '이런 일을 해요 (줄마다 하나)', type: 'textarea', full: true},
+  {k: 'reviewNo', label: '광고 심의필 번호 (받은 뒤 적기)', full: true},
+];
+function cardDefaults() {
+  return {name: '현미숙', org: '삼성생명', title: 'FC · 보험 상담 30년', intro: '사장님의 사업과 가족을 30년 경험으로 함께 지키겠습니다',
+    badges: '보험 상담 30년, 개인사업자·자영업자 전문, CEO 보장·재무 컨설팅', phone: db.settings.applyPhone || '',
+    points: '개인사업자·자영업자 보장 점검\n식당·카페·미용실 사업장 화재·배상책임 상담\n법인 CEO 유고 대비·퇴직금·가업승계 준비\n가족 보험 한눈에 정리'};
+}
+function cardOpen() {
+  const c = {...cardDefaults(), ...(db.settings.card || {})};
+  openSheet('🪪 디지털 명함', `<p class="muted" style="margin-top:0">적은 내용으로 고객에게 보낼 명함 링크를 만들어요. 명함에는 전화·문자·카톡 상담·연락처 저장·<b>무료 상담 신청</b> 버튼이 들어가요.</p>
+    <div style="text-align:center;margin-bottom:8px"><img id="cardPhotoPrev" src="${c.photo || ''}" style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid #d4b46a;${c.photo ? '' : 'display:none'}">
+      <div class="row" style="gap:8px;justify-content:center;margin-top:6px"><button class="btn sec sm" onclick="$('cardPhotoIn').click()">📷 사진 ${c.photo ? '바꾸기' : '넣기'}</button>${c.photo ? '<button class="btn sec sm" onclick="cardPhoto=null;$(\'cardPhotoPrev\').style.display=\'none\'">사진 빼기</button>' : ''}</div>
+      <input type="file" id="cardPhotoIn" accept="image/*" hidden onchange="cardPhotoPick(this)"></div>
+    ${formHtml(BCARD_FIELDS, c)}
+    <button class="btn hms-btn" style="width:100%;margin-top:12px;padding:14px" onclick="cardSave()">💾 저장하고 명함 링크 만들기</button>
+    <div id="cardOut" style="margin-top:12px"></div>`);
+  cardPhoto = c.photo || null;
+  if (db.settings.card) cardLink();
+}
+let cardPhoto = null;
+function cardPhotoPick(input) {
+  const f = input.files && input.files[0]; input.value = ''; if (!f) return;
+  const img = new Image(), url = URL.createObjectURL(f);
+  img.onload = () => {
+    const S = 320, cv = document.createElement('canvas'), m = Math.min(img.width, img.height); cv.width = cv.height = S;
+    cv.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, S, S); // 가운데를 정사각형으로
+    cardPhoto = cv.toDataURL('image/jpeg', 0.82); URL.revokeObjectURL(url);
+    $('cardPhotoPrev').src = cardPhoto; $('cardPhotoPrev').style.display = '';
+  };
+  img.src = url;
+}
+async function cardSave() {
+  const v = readForm(BCARD_FIELDS);
+  if (!v.name) return alert('이름을 적어 주세요.');
+  ['kakao', 'homepage'].forEach(k => { if (v[k] && !/^https?:\/\//.test(v[k])) v[k] = 'https://' + v[k]; });
+  db.settings.card = {...v, photo: cardPhoto || ''}; save();
+  await cardLink(true);
+}
+async function cardLink(publish) {
+  const c = {...db.settings.card, apply: applyUrlFor('디지털 명함')};
+  const base = location.href.split('#')[0].replace(/[?].*$/, '');
+  let url = '', note = '';
+  if (SYNC.on && SYNC.user) {
+    try {
+      if (publish) await firebase.firestore().collection('hmsfc_pub').doc(SYNC.user.uid).set({card: JSON.stringify(c), cardAt: Date.now()}, {merge: true});
+      url = new URL('card.html?u=' + SYNC.user.uid, base).href;
+    } catch (e) { note = '⚠️ 명함을 올리지 못했어요 (Firebase 규칙 확인). 사진 없는 링크로 만들었어요.'; }
+  } else note = '동기화가 꺼져 있어서 사진 없는 링크로 만들었어요. (동기화를 켜면 사진이 들어간 짧은 링크가 돼요)';
+  if (!url) { const {photo, ...rest} = c; url = new URL('card.html#d=' + btoa(unescape(encodeURIComponent(JSON.stringify(rest)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''), base).href; }
+  let qr = ''; try { const q = (await loadQr())(0, 'M'); q.addData(url); q.make(); qr = q.createDataURL(5, 2); } catch (e) {}
+  if (publish) toast('🪪 명함을 저장했어요.');
+  $('cardOut').innerHTML = `<div class="card" style="text-align:center">${note ? `<div class="notice" style="text-align:left">${note}</div>` : ''}
+    ${qr ? `<img src="${qr}" alt="명함 QR" style="width:170px;height:170px;image-rendering:pixelated"><br>` : ''}
+    <div style="word-break:break-all;font-size:12px;margin:6px 0">${esc(url)}</div>
+    <div class="row" style="gap:8px"><button class="btn sec grow" onclick="copyText('${esc(url)}')">📋 링크 복사</button><button class="btn sec grow" onclick="cardShare('${esc(url)}')">💬 보내기</button><a class="btn sec grow" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none;text-align:center">👀 미리 보기</a></div>
+    ${qr ? `<a class="btn sec" href="${qr}" download="디지털명함_QR.png" style="display:block;margin-top:8px;text-decoration:none">🖼️ QR 저장 (종이 명함·안내문에)</a>` : ''}
+    <p class="muted" style="font-size:12px;margin:8px 0 0">명함 안의 [무료 상담 신청]으로 신청하면 유입 경로가 '디지털 명함'으로 잡혀요. 고객에게 처음 보낼 때는 받는 분이 원하실 때 보내 주세요.</p></div>`;
+}
+async function cardShare(url) {
+  const c = db.settings.card || {};
+  try { if (navigator.share) return await navigator.share({title: `${c.name} 명함`, text: `안녕하세요, ${c.org || ''} ${c.name || ''}입니다. 제 명함 보내 드려요.`, url}); } catch (e) { return; }
+  copyText(url); toast('링크를 복사했어요. 카톡·문자에 붙여넣어 보내세요.');
+}
 
 /* ───────── 목표 ───────── */
 const GOAL_FIELDS = [

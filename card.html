@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>디지털 명함 · HMS PREMIUM</title>
+<style>
+  :root{--g:#0d3b2e;--g2:#14523f;--gold:#b89b5e;--gold2:#d4b46a;--ink:#1f2933;--sub:#616e7c;--line:#d9dee3;--bg:#f6f5f0}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
+  .wrap{max-width:480px;margin:0 auto;padding:16px 16px 40px}
+  .top{background:linear-gradient(160deg,var(--g),var(--g2));color:#f3ead2;border-radius:22px;padding:26px 20px 22px;text-align:center;border:1px solid var(--gold);position:relative}
+  .brand{font-size:11px;letter-spacing:4px;color:var(--gold2);font-weight:800}
+  .photo{width:132px;height:132px;border-radius:50%;object-fit:cover;border:3px solid var(--gold2);margin:14px auto 8px;display:block;background:#0b3026}
+  .ph-empty{width:132px;height:132px;border-radius:50%;border:3px solid var(--gold2);margin:14px auto 8px;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:900;color:var(--gold2);background:#0b3026}
+  h1{margin:4px 0 0;font-size:26px}
+  .title{font-size:14px;opacity:.9}
+  .intro{margin:10px 0 0;font-size:15px}
+  .badges{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:12px}
+  .badges span{font-size:12px;border:1px solid rgba(212,180,106,.7);border-radius:999px;padding:3px 10px}
+  .btns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+  .b{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 4px;border-radius:14px;background:#fff;border:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  .b span{font-size:22px}
+  .kakao{background:#fee500;border-color:#fee500;color:#191600}
+  .cta{display:block;text-align:center;margin-top:12px;padding:15px;border-radius:999px;background:var(--g);color:#f3ead2;text-decoration:none;font-weight:900;font-size:17px;border:1px solid var(--gold)}
+  .card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:16px;padding:16px 18px;margin-top:14px}
+  .card h2{font-size:17px;margin:0 0 8px}
+  .card ul{margin:0;padding-left:18px}
+  .card li{margin:3px 0}
+  .row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid #eef0f2;font-size:15px}
+  .row:first-of-type{border-top:0}
+  .row small{color:var(--sub)}
+  .row a{color:var(--g);font-weight:700;text-decoration:none;text-align:right;word-break:break-all}
+  .muted{color:var(--sub);font-size:12px;text-align:center;margin-top:16px}
+  .err{text-align:center;padding:40px 10px;color:var(--sub)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="err">명함을 불러오고 있어요…</div></div>
+<script>
+// 디지털 명함: card.html?u=(계정 번호) → Firebase 공개 칸(hmsfc_pub)의 명함 내용을 보여 줌
+//              card.html#d=(내용) → 링크 안에 담긴 내용으로 보여 줌 (사진 없음, 예비)
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '';
+async function load() {
+  const P = new URLSearchParams(location.search), U = (P.get('u') || '').replace(/[^A-Za-z0-9]/g, '');
+  const h = new URLSearchParams(location.hash.slice(1)).get('d');
+  if (h) { try { return JSON.parse(decodeURIComponent(escape(atob(h.replace(/-/g, '+').replace(/_/g, '/'))))); } catch (e) {} }
+  if (!U) return null;
+  const cfg = await (await fetch('sync-config.json', {cache: 'no-cache'})).json();
+  const r = await fetch(`https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/hmsfc_pub/${U}?key=${cfg.apiKey}`);
+  if (!r.ok) return null;
+  const f = (await r.json()).fields || {}, c = f.card && f.card.stringValue;
+  return c ? JSON.parse(c) : null;
+}
+function render(c) {
+  document.title = `${c.name || '디지털 명함'} · ${c.org || 'HMS PREMIUM'}`;
+  const tel = String(c.phone || '').replace(/[^\d+]/g, ''), apply = safeUrl(c.apply), kakao = safeUrl(c.kakao), home = safeUrl(c.homepage);
+  const pts = String(c.points || '').split('\n').map(x => x.trim()).filter(Boolean);
+  const badges = String(c.badges || '').split(',').map(x => x.trim()).filter(Boolean);
+  $('app').innerHTML = `
+  <div class="top"><div class="brand">HMS PREMIUM</div>
+    ${c.photo && /^data:image\/(jpeg|png|webp);base64,/.test(c.photo) ? `<img class="photo" src="${c.photo}" alt="${esc(c.name)} 사진">` : `<div class="ph-empty">${esc((c.name || 'FC').slice(0, 3))}</div>`}
+    <h1>${esc(c.name)}</h1><div class="title">${esc([c.org, c.title].filter(Boolean).join(' · '))}</div>
+    ${c.intro ? `<p class="intro">${esc(c.intro)}</p>` : ''}
+    ${badges.length ? `<div class="badges">${badges.map(b => `<span>${esc(b)}</span>`).join('')}</div>` : ''}
+  </div>
+  <div class="btns">
+    ${tel ? `<a class="b" href="tel:${tel}"><span>📞</span>전화</a><a class="b" href="sms:${tel}"><span>💬</span>문자</a>` : ''}
+    ${kakao ? `<a class="b kakao" href="${esc(kakao)}" target="_blank" rel="noopener"><span>🗨️</span>카카오톡 상담</a>` : ''}
+    ${c.email ? `<a class="b" href="mailto:${esc(c.email)}"><span>✉️</span>이메일</a>` : ''}
+    <button class="b" id="saveBtn"><span>📇</span>연락처 저장</button>
+    <button class="b" id="shareBtn"><span>🔗</span>명함 공유</button>
+  </div>
+  ${apply ? `<a class="cta" href="${esc(apply)}">📝 무료 상담 신청하기</a>` : ''}
+  ${pts.length ? `<div class="card"><h2>이런 일을 해요</h2><ul>${pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>` : ''}
+  <div class="card"><h2>연락처</h2>
+    ${c.phone ? `<div class="row"><small>휴대폰</small><a href="tel:${tel}">${esc(c.phone)}</a></div>` : ''}
+    ${c.office ? `<div class="row"><small>사무실</small><a href="tel:${esc(String(c.office).replace(/[^\d+]/g, ''))}">${esc(c.office)}</a></div>` : ''}
+    ${c.email ? `<div class="row"><small>이메일</small><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div>` : ''}
+    ${c.address ? `<div class="row"><small>주소</small><a href="https://map.naver.com/p/search/${encodeURIComponent(c.address)}" target="_blank" rel="noopener">${esc(c.address)}</a></div>` : ''}
+    ${home ? `<div class="row"><small>블로그·홈</small><a href="${esc(home)}" target="_blank" rel="noopener">${esc(home.replace(/^https?:\/\//, ''))}</a></div>` : ''}
+  </div>
+  <p class="muted">${esc(c.org || '')} ${esc(c.name || '')}${c.reviewNo ? ' · ' + esc(c.reviewNo) : ''}<br>보험 가입 전 상품설명서와 약관을 꼭 읽어 보세요.</p>`;
+  $('saveBtn').onclick = () => {
+    const v = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${c.name || ''}`, `N:${c.name || ''};;;;`, c.org && `ORG:${c.org}`, c.title && `TITLE:${c.title}`,
+      tel && `TEL;TYPE=CELL:${c.phone}`, c.office && `TEL;TYPE=WORK:${c.office}`, c.email && `EMAIL:${c.email}`, c.address && `ADR;TYPE=WORK:;;${c.address};;;;`,
+      `URL:${location.href}`, 'END:VCARD'].filter(Boolean).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([v], {type: 'text/vcard'})); a.download = `${c.name || 'contact'}.vcf`; a.click();
+  };
+  $('shareBtn').onclick = async () => {
+    const data = {title: `${c.name} 명함`, text: `${c.org || ''} ${c.name || ''} 디지털 명함입니다.`, url: location.href};
+    try { if (navigator.share) return await navigator.share(data); await navigator.clipboard.writeText(location.href); alert('명함 주소를 복사했어요.'); } catch (e) {}
+  };
+}
+load().then(c => c ? render(c) : $('app').innerHTML = '<div class="err">명함을 찾지 못했어요.<br>받으신 링크를 다시 눌러 주세요.</div>')
+  .catch(() => $('app').innerHTML = '<div class="err">명함을 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</div>');
+</script>
+</body>
+</html>
