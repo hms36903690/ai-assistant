@@ -560,7 +560,7 @@ label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
 <script>
 /* ───────── 데이터 저장 (이 기기의 브라우저 안에 저장) ───────── */
 const KEY = 'hmsfc_app_v2';
-const APP_VERSION = '2026.11.23-258';
+const APP_VERSION = '2026.11.23-259';
 const STAGES = ['일반', '상담중', '제안', '계약', '유지관리']; // 예전 '관심' → '일반'
 // 연락 상태 (관심고객·고객 같이 씀)
 const DB_STATUS = ['미연락', '부재', '통화완료', '약속잡음', '보류', '거절'];
@@ -3759,9 +3759,24 @@ function ntfyOpen() {
       <button class="btn sec" style="width:100%;margin-top:8px" onclick="copyText('${esc(t)}')">📋 알림 이름 복사</button></div>
     <div class="row" style="gap:8px">${db.settings.ntfyOn ? '<button class="btn sec grow" onclick="db.settings.ntfyOn=false;save();ntfyPub();ntfyOpen();toast(\'알림을 껐어요.\')">알림 끄기</button>' : '<button class="btn hms-btn grow" onclick="db.settings.ntfyOn=true;save();ntfyPub();if(db.settings.card)cardPublish();ntfyOpen();toast(\'🔔 알림을 켰어요.\')">🔔 알림 켜기</button>'}
       <button class="btn sec grow" onclick="ntfyTest()">시험 알림 보내기</button></div>
+    <div class="card" style="margin-top:10px"><b>📋 보낸 알림 기록 (최근 12시간)</b>
+      <p class="muted" style="font-size:12px;margin:4px 0 6px">여기 기록이 있는데 휴대폰에 안 떴다면 → 휴대폰 설정에서 ntfy 알림·배터리(제한 없음)를 확인하세요.</p>
+      <div id="ntfyLogBox"></div><button class="btn sec" style="width:100%;margin-top:6px" onclick="ntfyLog()">🔄 기록 새로 보기</button></div>
     <p class="muted" style="font-size:12px;margin:8px 0 0">알림 이름은 명함·신청 링크 안에 들어가요. 누군가 알게 되면 장난 알림이 올 수는 있지만, 고객 정보를 볼 수는 없어요.</p>`);
+  ntfyLog();
+}
+// 📋 알림 기록: ntfy 서버에 최근 12시간 동안 실제로 보내진 알림 목록 → 고객 신청 때 알림이 나갔는지 바로 확인
+async function ntfyLog() {
+  const box = $('ntfyLogBox'); if (!box) return; box.innerHTML = '<span class="muted">불러오는 중…</span>';
+  try {
+    const txt = await (await fetch('https://ntfy.sh/' + db.settings.ntfyTopic + '/json?poll=1&since=12h', {cache: 'no-store'})).text();
+    const rows = txt.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch (e) { return null; } }).filter(x => x && x.event === 'message').reverse();
+    box.innerHTML = rows.length ? rows.map(m => `<div style="padding:6px 0;border-bottom:1px solid #eef2f6;font-size:13px"><b>${new Date(m.time * 1000).toLocaleString('ko-KR', {month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit'})}</b><br>${esc(m.message || '')}</div>`).join('')
+      : '<span class="muted">최근 12시간 동안 보낸 알림이 없어요. 고객이 신청했는데도 여기 없다면 알림이 안 보내진 거예요.</span>';
+  } catch (e) { box.innerHTML = '<span class="muted">기록을 불러오지 못했어요: ' + esc(e.message || String(e)) + '</span>'; }
 }
 function ntfyTest() {
+  if (!db.settings.ntfyOn) { db.settings.ntfyOn = true; save(); ntfyPub(); } // 시험 알림을 보낸다는 건 쓰겠다는 뜻 → 알림 켜기
   fetch('https://ntfy.sh/' + db.settings.ntfyTopic, {method: 'POST', headers: {'Tags': 'bell', 'Click': 'https://hms36903690.github.io/ai-assistant/index.html#ceo'}, body: '🔔 시험 알림이에요. 알림을 누르면 영업비서 앱 CEO 화면이 열려요.'})
     .then(r => toast(r.ok ? '시험 알림을 보냈어요. 휴대폰을 확인해 보세요.' : '알림을 보내지 못했어요 (' + r.status + ')')).catch(() => toast('알림을 보내지 못했어요. 인터넷 연결을 확인해 주세요.'));
 }
@@ -4291,6 +4306,8 @@ if (!db.settings.applyAtV1) {
     if (!c.applyAt) c.applyAt = m[1] + '|' + m[2].trim(); c.memo = c.memo.replace(m[0], ''); });
   db.settings.applyAtV1 = true; save();
 }
+// 알림 이름을 만들어 두고 [알림 켜기]를 안 누른 경우가 많아서: 알림 이름이 있고 일부러 끈 적이 없으면 켜진 것으로
+if (db.settings.ntfyTopic && db.settings.ntfyOn === undefined) { db.settings.ntfyOn = true; save(); }
 if (!db.settings.stageV1) {
   db.customers.forEach(c => { if (c.stage === '관심') c.stage = '일반'; });
   db.settings.stageV1 = true; save();
