@@ -105,31 +105,31 @@ function render(c) {
       `URL:${location.href}`, 'END:VCARD'].filter(Boolean).join('\r\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([v], {type: 'text/vcard'})); a.download = `${c.name || 'contact'}.vcf`; a.click();
   };
+  kakaoPreload(c);
   $('shareBtn').onclick = async () => {
     // 카카오 키가 있으면 카톡 친구 고르는 화면으로 바로 (사진·이름·직함·[명함 확인] 카드)
-    if (c.kakaoKey) { try { return await kakaoShare(c); } catch (e) {} }
+    if (c.kakaoKey) { try { return kakaoShare(c); } catch (e) {} } // 기다리지 않고 바로 (누른 순간에 보내야 함)
     const data = {title: `${c.name} 명함`, text: `${c.org || ''} ${c.name || ''} 디지털 명함입니다.`, url: location.href};
     try { if (navigator.share) return await navigator.share(data); await navigator.clipboard.writeText(location.href); alert('명함 주소를 복사했어요.'); } catch (e) {}
   };
 }
+// 카카오 프로그램은 명함이 열릴 때 미리 불러 둠 → 버튼을 누르는 순간 바로 보내야 휴대폰이 막지 않음
+let kakaoOn = false;
+function kakaoPreload(c) {
+  if (!c.kakaoKey) return;
+  const sc = document.createElement('script'); sc.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js'; sc.crossOrigin = 'anonymous';
+  sc.onload = () => { try { if (!Kakao.isInitialized()) Kakao.init(c.kakaoKey); kakaoOn = true; } catch (e) {} };
+  document.head.appendChild(sc);
+}
 function kakaoShare(c) {
-  return new Promise((ok, no) => {
-    const go = () => {
-      try {
-        if (!Kakao.isInitialized()) Kakao.init(c.kakaoKey);
-        const tags = String(c.badges || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 3).join(' · ');
-        const url = /[?&]u=/.test(location.search) ? location.href.split('#')[0] : location.href, img = /^https:\/\//.test(c.kakaoImg || '') ? c.kakaoImg : 'https://hms36903690.github.io/ai-assistant/card-og.png';
-        Kakao.Share.sendDefault({objectType: 'feed',
-          content: {title: `${c.name || ''} ${[c.org, c.title].filter(Boolean).join(' · ')}`.trim(), description: tags || c.intro || '디지털 명함을 확인하세요.',
-            imageUrl: img, imageWidth: 640, imageHeight: c.kakaoImg ? 640 : 336, link: {mobileWebUrl: url, webUrl: url}},
-          buttons: [{title: '명함 확인', link: {mobileWebUrl: url, webUrl: url}}]});
-        ok();
-      } catch (e) { no(e); }
-    };
-    if (window.Kakao) return go();
-    const sc = document.createElement('script'); sc.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js'; sc.crossOrigin = 'anonymous';
-    sc.onload = go; sc.onerror = no; document.head.appendChild(sc);
-  });
+  if (!kakaoOn || !window.Kakao) throw new Error('카카오 준비 안 됨');
+  const tags = String(c.badges || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 3).join(' · ');
+  const url = /[?&]u=/.test(location.search) ? location.href.split('#')[0] : location.href;
+  const img = /^https:\/\//.test(c.kakaoImg || '') ? c.kakaoImg : 'https://hms36903690.github.io/ai-assistant/card-og.png';
+  Kakao.Share.sendDefault({objectType: 'feed',
+    content: {title: `${c.name || ''} ${[c.org, c.title].filter(Boolean).join(' · ')}`.trim(), description: tags || c.intro || '디지털 명함을 확인하세요.',
+      imageUrl: img, imageWidth: 640, imageHeight: c.kakaoImg ? 640 : 336, link: {mobileWebUrl: url, webUrl: url}},
+    buttons: [{title: '명함 확인', link: {mobileWebUrl: url, webUrl: url}}]});
 }
 load().then(c => c ? render(c) : $('app').innerHTML = `<div class="err">명함을 찾지 못했어요.<br>받으신 링크를 다시 눌러 주세요.${loadErr ? `<br><small style="color:#9aa5b1">(${esc(loadErr)})</small>` : ''}</div>`)
   .catch(e => $('app').innerHTML = `<div class="err">명함을 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.<br><small style="color:#9aa5b1">(${esc(e.message || e)})</small></div>`);
